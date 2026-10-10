@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="420" viewBox="0 0 1400 420" role="img" aria-label="ITIN Pro monochrome logo">
+  <rect width="1400" height="420" rx="28" fill="#FFFFFF"/>
+  <g transform="translate(82 70)">
+    <path d="M42 0h206c45 0 82 37 82 82v116c0 45-37 82-82 82H42c-23 0-42-19-42-42V42C0 19 19 0 42 0z" fill="#061A2F"/>
+    <path d="M95 62h98l64 64v96H95z" fill="#FFFFFF"/>
+    <path d="M193 62v64h64z" fill="#D7E8F6"/>
+    <path d="M124 142h84M124 178h62" stroke="#061A2F" stroke-width="14" stroke-linecap="round"/>
+    <circle cx="241" cy="221" r="66" fill="#FFFFFF"/>
+    <path d="M208 223l27 27 58-72" fill="none" stroke="#061A2F" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="470" y="203" font-family="Arial, Helvetica, sans-serif" font-size="94" font-weight="800" letter-spacing="-3" fill="#061A2F">ITINPRO</text>
+  <text x="474" y="252" font-family="Arial, Helvetica, sans-serif" font-size="24" letter-spacing="1.4" fill="#5A6675">CERTIFIED ACCEPTANCE AGENT SUPPORT</text>
+</svg>
