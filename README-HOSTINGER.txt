@@ -4,6 +4,8 @@ Upload the contents of this folder into the public_html folder for itinpro.uk.
 
 For GitHub deployment, see README.md. Keep index.html in the repository root and deploy the main branch to /public_html.
 
+This special flat release has no assets, blog or css subfolders. Upload all extracted files directly to the GitHub repository root so GitHub cannot flatten or omit directory structures.
+
 Included:
 - index.html
 - smart-itin-form.html

@@ -2,14 +2,17 @@
 
 Production-ready static website source for [itinpro.uk](https://itinpro.uk/).
 
-## Repository structure
+## Flat repository structure
+
+Every deployable file is intentionally stored at the repository root. There are no `assets`, `blog` or `css` subfolders, preventing GitHub's web uploader from losing or flattening directories.
 
 - `index.html` — homepage
 - `smart-itin-form.html` — client enquiry form
 - `itin-document-rules.html` — document verification guidance
-- `blog/` — complete SEO guide library, including the reviewed Claude article set
-- `assets/` — logo and image assets
-- `styles.css` — complete responsive design system
+- `itin-guides.html` — complete guide-library index
+- Individual guide `.html` files — reviewed SEO article set
+- Logo `.svg` and `.png` files — website and email assets
+- `styles.css` and `claude-guides.css` — responsive styles
 - `robots.txt` and `sitemap.xml` — search-engine files
 - `.htaccess` and `404.html` — Hostinger/Apache configuration
 
@@ -18,7 +21,7 @@ No build command or package installation is required. The repository files are t
 ## Deploy through GitHub to Hostinger
 
 1. Create a GitHub repository, for example `itinpro-website`.
-2. Upload **the contents of this folder** to the repository root. `index.html` must be at the root, not inside another folder.
+2. Upload **all extracted files together** to the repository root. `index.html` must be at the root. No folders need to be uploaded.
 3. Commit the files to the `main` branch.
 4. In Hostinger hPanel, open **Websites → itinpro.uk → Dashboard → Advanced → Git**.
 5. Add the GitHub repository URL and select the `main` branch.

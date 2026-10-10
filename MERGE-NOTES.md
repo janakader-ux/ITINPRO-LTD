@@ -2,6 +2,8 @@
 
 This is the recommended production package for Hostinger.
 
+This edition uses a deliberately flat file structure for reliable uploading through GitHub's website. All internal links, canonical URLs and sitemap locations have been rewritten accordingly.
+
 Included:
 
 - Approved ITIN Pro branding and logo assets
