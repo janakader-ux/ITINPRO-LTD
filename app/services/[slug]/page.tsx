@@ -1,0 +1,10 @@
+import type { Metadata } from 'next';
+import Image from 'next/image';
+import { notFound } from 'next/navigation';
+import { GeoFAQAccordion } from '@/components/GeoFAQAccordion';
+import { LeadForm } from '@/components/LeadForm';
+import { services } from '@/lib/site';
+
+export function generateStaticParams(){return services.map(s=>({slug:s.slug}));}
+export async function generateMetadata({params}:{params:Promise<{slug:string}>}):Promise<Metadata>{const {slug}=await params;const s=services.find(x=>x.slug===slug);return s?{title:s.title,description:s.short,alternates:{canonical:`/services/${s.slug}`}}:{};}
+export default async function ServicePage({params}:{params:Promise<{slug:string}>}){const {slug}=await params;const service=services.find(s=>s.slug===slug);if(!service)notFound();const schema={'@context':'https://schema.org','@type':'Service',name:service.title,description:service.short,provider:{'@type':'ProfessionalService',name:'ITIN Pro UK',url:'https://itinpro.uk'},areaServed:['GB','EU']};return <><script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(schema)}}/><section className="py-20"><div className="container-premium grid items-center gap-12 lg:grid-cols-2"><div><p className="eyebrow">ITIN Pro service</p><h1 className="section-title mt-4">{service.title}</h1><p className="mt-6 text-lg leading-8 text-silver">{service.short}</p><p className="mt-5 leading-8 text-slate-300">Every engagement begins with an eligibility and document-route review. We explain the likely filing path, what evidence is required, what the CAA can certify, and any separately quoted tax-return work.</p><a href="#enquiry" className="gold-button mt-8">Start your enquiry</a></div><div className="relative aspect-[3/2] overflow-hidden rounded-3xl border border-gold/20"><Image src={service.image} alt={`${service.title} consultation`} fill priority sizes="(max-width:1024px) 100vw,50vw" className="object-cover"/></div></div></section><GeoFAQAccordion/><LeadForm/></>}
