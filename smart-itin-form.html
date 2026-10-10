@@ -24,12 +24,15 @@
           <h1>Tell us why you need an ITIN.</h1>
           <p class="lead">This form helps identify your likely Form W-7 reason code, exception evidence, document requirements and whether in-person CAA verification can avoid mailing your passport to the IRS.</p>
         </div>
-        <form class="card form-card" action="mailto:Shan@itinpro.uk,Taz@itinpro.uk?subject=ITIN%20Pro%20Smart%20Form%20Enquiry" method="post" enctype="text/plain">
+        <form class="card form-card" id="itin-enquiry-form">
           <label>Full name
             <input name="Full name" autocomplete="name" required>
           </label>
           <label>Email
             <input type="email" name="Email" autocomplete="email" required>
+          </label>
+          <label>Phone number
+            <input type="tel" name="Phone" autocomplete="tel">
           </label>
           <label>Where are you based?
             <select name="Location">
@@ -48,8 +51,13 @@
               <option>US property sale / FIRPTA</option>
               <option>US LLC or partnership income</option>
               <option>Amazon KDP / royalties</option>
+              <option>Gambling or casino winnings</option>
+              <option>US pension, 401(k) or inheritance</option>
               <option>1040NR tax return</option>
               <option>Spouse of US citizen or resident</option>
+              <option>Student, professor or researcher</option>
+              <option>US bank account or mortgage</option>
+              <option>Dependent ITIN</option>
               <option>EIN / LLC formation</option>
               <option>ITIN renewal</option>
               <option>Other</option>
@@ -67,8 +75,9 @@
           <label>Briefly explain your case
             <textarea name="Message"></textarea>
           </label>
-          <button class="btn" type="submit">Send enquiry</button>
-          <p class="small">Submitting this form opens your email app and addresses the enquiry to both Shan and Taz.</p>
+          <button class="btn" type="submit">Prepare email enquiry</button>
+          <p class="small">Your details stay on your device. Submitting opens a prepared email addressed to both Shan and Taz. Please review it and press Send in your email app.</p>
+          <p class="small" id="form-status" role="status" aria-live="polite"></p>
         </form>
       </div>
     </section>
@@ -76,5 +85,32 @@
   <footer class="site-footer">
     <div class="container"><p>ITIN Pro is an independent service and is not the IRS. Contact Taz at <a href="mailto:Taz@itinpro.uk">Taz@itinpro.uk</a> / <a href="tel:+447864113967">+44 7864 113967</a>, or Shan at <a href="mailto:Shan@itinpro.uk">Shan@itinpro.uk</a> / <a href="tel:+447864999586">+44 7864 999586</a>.</p></div>
   </footer>
+  <script>
+    document.getElementById('itin-enquiry-form').addEventListener('submit', function (event) {
+      event.preventDefault();
+      if (!this.reportValidity()) return;
+
+      const data = new FormData(this);
+      const value = (name) => String(data.get(name) || '').trim();
+      const subject = 'ITIN Pro Smart Form Enquiry – ' + value('Full name');
+      const body = [
+        'New ITIN Pro website enquiry',
+        '',
+        'Full name: ' + value('Full name'),
+        'Email: ' + value('Email'),
+        'Phone: ' + (value('Phone') || 'Not provided'),
+        'Location: ' + value('Location'),
+        'Reason for support: ' + value('Reason'),
+        'Verification preference: ' + value('Verification preference'),
+        '',
+        'Case details:',
+        value('Message') || 'Not provided'
+      ].join('\n');
+
+      document.getElementById('form-status').textContent = 'Your email app is opening. Please review the prepared enquiry and press Send.';
+      window.location.href = 'mailto:Shan@itinpro.uk,Taz@itinpro.uk?subject=' +
+        encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+    });
+  </script>
 </body>
 </html>
