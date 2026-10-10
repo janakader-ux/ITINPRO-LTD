@@ -1,53 +1,66 @@
-# ITIN Pro website
+# ITIN Pro UK — premium Next.js website
 
-Production-ready static website source for [itinpro.uk](https://itinpro.uk/).
+Registered business: **ITIN PRO LTD**, company number **17336134**, 18 Sundew Close, Bedford, England, MK42 0SR.
 
-## Flat repository structure
+The site uses original topic-specific editorial imagery for Form W-7, 1040-NR, FIRPTA, Schedule K-1 / Form 8805, 401(k), family applicants, US banking, royalties, inheritance and withholding refunds. It deliberately does not use an IRS seal or an official-looking government endorsement badge.
 
-Every deployable file is intentionally stored at the repository root. There are no `assets`, `blog` or `css` subfolders, preventing GitHub's web uploader from losing or flattening directories.
+## Local setup
 
-- `index.html` — homepage
-- `smart-itin-form.html` — client enquiry form
-- `itin-document-rules.html` — document verification guidance
-- `itin-guides.html` — complete guide-library index
-- Individual guide `.html` files — reviewed SEO article set
-- Logo `.svg` and `.png` files — website and email assets
-- `styles.css` and `claude-guides.css` — responsive styles
-- `robots.txt` and `sitemap.xml` — search-engine files
-- `.htaccess` and `404.html` — Hostinger/Apache configuration
+```bash
+npm install
+cp .env.example .env.local
+npm run dev
+```
 
-No build command or package installation is required. The repository files are the deployable website.
+Open `http://localhost:3000`.
 
-## Deploy through GitHub to Hostinger
+## Secure enquiry setup
 
-1. Create a GitHub repository, for example `itinpro-website`.
-2. Upload **all extracted files together** to the repository root. `index.html` must be at the root. No folders need to be uploaded.
-3. Commit the files to the `main` branch.
-4. In Hostinger hPanel, open **Websites → itinpro.uk → Dashboard → Advanced → Git**.
-5. Add the GitHub repository URL and select the `main` branch.
-6. Set the deployment directory to `/public_html` for the main domain.
-7. For a private repository, add the SSH key supplied by Hostinger in **GitHub → Repository Settings → Deploy keys**, with read access.
-8. Select **Deploy** and enable automatic deployment/webhook if Hostinger offers it.
-9. Open `https://itinpro.uk/`, test navigation and send a test enquiry.
-10. Submit `https://itinpro.uk/sitemap.xml` in Google Search Console.
+1. Create a Supabase project and run `supabase.sql` in its SQL editor.
+2. Create a Resend account, verify `itinpro.uk`, and create an API key.
+3. Add the values from `.env.example` to `.env.local` and your hosting environment.
+4. Never expose `SUPABASE_SERVICE_ROLE_KEY` or `RESEND_API_KEY` with a `NEXT_PUBLIC_` prefix.
+5. Configure database retention, restricted staff access, MFA and audit logging before collecting real enquiries.
 
-## Updating the website
+Optional Google Analytics 4 is consent-gated. Set `NEXT_PUBLIC_GA_MEASUREMENT_ID` only after creating the property; the tag loads only when a visitor chooses **Allow analytics**.
 
-Edit the relevant file in GitHub, commit to `main`, then redeploy from Hostinger Git. With automatic deployment enabled, each new commit should deploy automatically.
+The public form deliberately refuses passport uploads and tells applicants not to provide passport numbers, tax IDs or bank details.
 
-## Contact configuration
+## GitHub and Vercel deployment — recommended
 
-- Primary: Thasneem Alzari (Taz) CAA — `Taz@itinpro.uk` — `+44 7864 113967`
-- Additional contact: Shan — `Shan@itinpro.uk` — `+44 7864 999586`
+```bash
+git init
+git add .
+git commit -m "Launch premium ITIN Pro Next.js website"
+git branch -M main
+git remote add origin https://github.com/YOUR-ACCOUNT/YOUR-REPOSITORY.git
+git push -u origin main
+```
 
-The Smart ITIN Form currently opens the visitor's email application and sends the enquiry to Taz. It does not upload passports or identity documents. Add a secure server-side form or CRM before accepting confidential files online.
+Then import the repository in Vercel, add the environment variables, connect `itinpro.uk`, and deploy. Vercel provides the Next.js server runtime required by `/api/enquiries` and image optimisation.
 
-## Combined-package decision
+## Hostinger deployment
 
-This all-in-one release keeps the tested ITIN Pro homepage, logo, contact information, document guidance and low-risk email enquiry form. It also includes the useful Claude SEO article library after removing broken links, placeholder company/ICO wording and unconfirmed fixed-fee claims.
+Use a Hostinger plan that explicitly supports persistent Node.js applications. Set:
 
-The experimental PHP passport-upload, admin-login and SumUp checkout code from the Claude package is intentionally not active in this release. It required live credentials, professional security testing, confirmed privacy/retention wording and reviewed engagement terms before it could safely process identity documents or payments.
+- Install command: `npm ci`
+- Build command: `npm run build`
+- Start command: `npm run start`
+- Node version: current supported LTS
 
-## Compliance
+Add the same environment variables in Hostinger. Ordinary static/shared Git deployment cannot run the enquiry API or Next.js image optimiser. Do not use static export if you need Supabase/Resend form submission.
 
-ITIN Pro is presented as an independent service and not as the IRS. The website deliberately avoids official IRS seals, logos and endorsement claims.
+## Existing links and downloads
+
+Legacy `.html` guide URLs redirect to the matching `/guides/...` route. Existing downloadable assets are retained in `public/downloads/`.
+
+## Pre-deployment checks
+
+```bash
+npm ci
+npm run typecheck
+npm run build
+npm audit
+```
+
+Repeat these checks after dependency updates and immediately before each production deployment.

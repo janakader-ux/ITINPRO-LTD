@@ -1,0 +1,61 @@
+ITIN PRO LTD — COMPLETE DEPLOYMENT PACKAGE V8
+================================================
+
+Registered company: ITIN PRO LTD
+Company number: 17336134
+Website: https://itinpro.uk
+
+WHAT YOU WILL SEE AFTER EXTRACTING THE MASTER ZIP
+-------------------------------------------------
+The master ZIP opens directly to this instruction file and four individual ZIP files. There is no additional enclosing folder.
+
+1. ITIN-Pro-Website-Deployment-v8.zip
+   This is the complete, tested Next.js website. Use this ZIP for GitHub, Vercel or a Hostinger Node.js deployment.
+
+2. ITIN-Pro-Website-Images-v8.zip
+   Convenience copy of every optimized website image. The same images are already included inside the complete website ZIP.
+
+3. ITIN-Pro-Website-Downloads-and-Logos-v8.zip
+   Convenience copy of the website downloads and code-native SVG logos. These are also already included inside the complete website ZIP.
+
+4. ITIN-Pro-Brand-Social-Letterhead-v8.zip
+   Email, LinkedIn, Instagram, YouTube, Google Business Profile, Stripe, SumUp, print and Word-letterhead assets.
+
+DEPLOYMENT — IMPORTANT
+----------------------
+Extract ITIN-Pro-Website-Deployment-v8.zip into an EMPTY GitHub repository root. You should immediately see package.json, package-lock.json, app, components, lib, public and README.md. Do not upload the four package ZIP files themselves into the website repository.
+
+The app, components, lib and public directories must remain as directories. Flattening those directories would break Next.js imports, routing, images and downloads.
+
+Hostinger must use a plan that supports Node.js applications:
+
+Install command: npm ci
+Build command: npm run build
+Start command: npm run start
+
+Add these hosting environment variables:
+
+NEXT_PUBLIC_SITE_URL=https://itinpro.uk
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+RESEND_API_KEY=
+RESEND_FROM_EMAIL=enquiries@itinpro.uk
+ENQUIRY_RECIPIENTS=Shan@itinpro.uk,Taz@itinpro.uk
+NEXT_PUBLIC_GA_MEASUREMENT_ID=
+
+The enquiry form intentionally remains unavailable until Supabase and Resend are configured. Do not add real passport numbers, tax identification numbers or bank details to the general website form.
+
+TEST STATUS
+-----------
+TypeScript: passed
+Production build: passed
+Generated pages: 44
+Public routes tested: 41
+Guide image mappings: 31 of 31
+Legacy-link checks: passed
+Dependency audit: 0 vulnerabilities
+Archive integrity: verified
+
+COMPLIANCE NOTE
+---------------
+The website does not use an IRS seal or claim government endorsement. Only add an official credential reference after confirming the exact public IRS directory-listed entity or reviewing the applicable CAA agreement.
