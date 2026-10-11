@@ -9,7 +9,82 @@ import { GeoFAQAccordion } from '@/components/GeoFAQAccordion';
 import { AcceptableDocumentsTable } from '@/components/AcceptableDocumentsTable';
 import { GuideVisualSummary } from '@/components/GuideVisualSummary';
 
-export function generateStaticParams(){return guides.map(g=>({slug:g.slug}));}
-export async function generateMetadata({params}:{params:Promise<{slug:string}>}):Promise<Metadata>{const {slug}=await params;const g=guides.find(x=>x.slug===slug);if(!g)return {};return {title:g.title,description:g.description,keywords:guideKeywords(g.slug,g.title),alternates:{canonical:`/guides/${g.slug}`},openGraph:{title:g.title,description:g.description,type:'article',images:[guideImage(g.category,g.slug)]}};}
+export function generateStaticParams() {
+  return guides.map((guide) => ({ slug: guide.slug }));
+}
 
-export default async function GuidePage({params}:{params:Promise<{slug:string}>}){const {slug}=await params;const guide=guides.find(g=>g.slug===slug);if(!guide)notFound();const image=guideImage(guide.category,guide.slug);const articleFaqs=guideFaqs(guide.slug,guide.title);const articleSchema={'@context':'https://schema.org','@type':'Article',headline:guide.title,description:guide.description,image:`https://itinpro.uk${image}`,author:{'@type':'Organization',name:'ITIN Pro UK'},publisher:{'@type':'Organization',name:'ITIN Pro UK'},dateModified:'2026-10-10',mainEntityOfPage:`https://itinpro.uk/guides/${guide.slug}`};const breadcrumbSchema={'@context':'https://schema.org','@type':'BreadcrumbList',itemListElement:[{'@type':'ListItem',position:1,name:'Home',item:'https://itinpro.uk/'},{'@type':'ListItem',position:2,name:'ITIN Guides & FAQs',item:'https://itinpro.uk/guides'},{'@type':'ListItem',position:3,name:guide.title,item:`https://itinpro.uk/guides/${guide.slug}`}]} ;return <article className="pb-24"><script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(articleSchema)}}/><script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(breadcrumbSchema)}}/><div className="relative min-h-[520px] overflow-hidden"><Image src={image} alt={`${guide.title} — ITIN Pro UK guide`} fill priority sizes="100vw" className="object-cover"/><div className="absolute inset-0 bg-gradient-to-t from-midnight via-midnight/80 to-midnight/20"/><div className="container-premium relative z-10 flex min-h-[520px] items-end pb-16"><div className="max-w-4xl"><Link href="/guides" className="eyebrow">ITIN Guides / FAQs</Link><p className="mt-5 text-sm font-bold text-gold">{guide.category}</p><h1 className="mt-3 font-display text-4xl leading-tight sm:text-6xl">{guide.title}</h1><p className="mt-5 max-w-3xl text-lg leading-8 text-slate-200">{guide.description}</p></div></div></div><GuideVisualSummary slug={guide.slug}/><div className="container-premium"><div className="guide-body mx-auto max-w-3xl py-14" dangerouslySetInnerHTML={{__html:normaliseGuideHtml(guide.body)}}/><aside className="mx-auto max-w-3xl rounded-3xl border border-emerald/30 bg-emerald/10 p-6"><p className="font-bold text-white">Remote CAA document rule</p><p className="mt-2 leading-7 text-slate-200">A video interview may be used, but the CAA must have the original identification document or an issuing-agency certified copy in their possession during the interview. Remote applicants can use an agreed secure delivery and return process.</p></aside></div>{guide.slug==='itin-acceptable-documents-passport'&&<AcceptableDocumentsTable/>}<GeoFAQAccordion items={articleFaqs}/><div className="container-premium"><div className="mx-auto max-w-3xl border-t border-white/10 pt-8 text-sm leading-6 text-silver">General information only. Rules and forms change. ITIN Pro is independent and is not the IRS. The IRS decides whether to issue an ITIN. <Link className="text-gold underline" href="/#enquiry">Discuss your facts with us.</Link></div></div></article>}
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const guide = guides.find((item) => item.slug === slug);
+  if (!guide) return {};
+  const image = guideImage(guide.category, guide.slug);
+  return {
+    title: guide.title,
+    description: guide.description,
+    keywords: guideKeywords(guide.slug, guide.title),
+    alternates: { canonical: `/guides/${guide.slug}` },
+    openGraph: { title: guide.title, description: guide.description, type: 'article', images: [image] },
+  };
+}
+
+export default async function GuidePage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const guide = guides.find((item) => item.slug === slug);
+  if (!guide) notFound();
+
+  const image = guideImage(guide.category, guide.slug);
+  const articleFaqs = guideFaqs(guide.slug, guide.title);
+  const articleSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: guide.title,
+    description: guide.description,
+    image: `https://itinpro.uk${image}`,
+    author: { '@type': 'Organization', name: 'ITIN Pro UK' },
+    publisher: { '@type': 'Organization', name: 'ITIN Pro UK' },
+    dateModified: '2026-10-11',
+    mainEntityOfPage: `https://itinpro.uk/guides/${guide.slug}`,
+  };
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://itinpro.uk/' },
+      { '@type': 'ListItem', position: 2, name: 'ITIN Guides & FAQs', item: 'https://itinpro.uk/guides' },
+      { '@type': 'ListItem', position: 3, name: guide.title, item: `https://itinpro.uk/guides/${guide.slug}` },
+    ],
+  };
+
+  return (
+    <article className="pb-24">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
+
+      <header className="container-premium pt-10 sm:pt-14">
+        <Link href="/guides" className="eyebrow">ITIN Guides / FAQs</Link>
+        <div className="relative mt-7 aspect-[3/2] overflow-hidden rounded-3xl border border-white/10 shadow-2xl">
+          <Image src={image} alt={`${guide.title} — ITIN Pro UK guide`} fill priority sizes="(max-width: 1280px) 100vw, 1200px" className="object-cover" />
+        </div>
+        <div className="mx-auto max-w-4xl py-10 text-center">
+          <p className="text-sm font-bold text-gold">{guide.category}</p>
+          <h1 className="mt-3 font-display text-4xl leading-tight sm:text-6xl">{guide.title}</h1>
+          <p className="mx-auto mt-5 max-w-3xl text-lg leading-8 text-slate-200">{guide.description}</p>
+        </div>
+      </header>
+
+      <GuideVisualSummary slug={guide.slug} />
+      <div className="container-premium">
+        <div className="guide-body mx-auto max-w-3xl py-14" dangerouslySetInnerHTML={{ __html: normaliseGuideHtml(guide.body) }} />
+        <aside className="mx-auto max-w-3xl rounded-3xl border border-emerald/30 bg-emerald/10 p-6">
+          <p className="font-bold text-white">Remote CAA document rule</p>
+          <p className="mt-2 leading-7 text-slate-200">A video interview may be used, but the CAA must have the original identification document or an issuing-agency certified copy in their possession during the interview. Remote applicants can use an agreed secure delivery and return process.</p>
+        </aside>
+      </div>
+      {guide.slug === 'itin-acceptable-documents-passport' && <AcceptableDocumentsTable />}
+      <GeoFAQAccordion items={articleFaqs} />
+      <div className="container-premium">
+        <div className="mx-auto max-w-3xl border-t border-white/10 pt-8 text-sm leading-6 text-silver">General information only. Rules and forms change. ITIN Pro is independent and is not the IRS. The IRS decides whether to issue an ITIN. <Link className="text-gold underline" href="/#enquiry">Discuss your facts with us.</Link></div>
+      </div>
+    </article>
+  );
+}
