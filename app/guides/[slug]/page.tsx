@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import guides from '@/lib/guides.json';
 import { guideImage } from '@/lib/site';
+import { categoryForGuide, getItinCategory, formatItinFee, itinFeeScope, additionalChargesNotice, otherCategoryNotice } from '@/lib/itin-pricing';
 import { guideFaqs, guideKeywords, normaliseGuideHtml } from '@/lib/guide-content';
 import { GeoFAQAccordion } from '@/components/GeoFAQAccordion';
 import { AcceptableDocumentsTable } from '@/components/AcceptableDocumentsTable';
@@ -33,6 +34,8 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
   if (!guide) notFound();
 
   const image = guideImage(guide.category, guide.slug);
+  const categoryId = categoryForGuide(guide.slug);
+  const feeCategory = categoryId ? getItinCategory(categoryId) : undefined;
   const articleFaqs = guideFaqs(guide.slug, guide.title);
   const articleSchema = {
     '@context': 'https://schema.org',
@@ -82,6 +85,7 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
       </div>
       {guide.slug === 'itin-acceptable-documents-passport' && <AcceptableDocumentsTable />}
       <GeoFAQAccordion items={articleFaqs} />
+      {feeCategory && <aside className="container-premium py-8"><div className="mx-auto max-w-3xl rounded-3xl border border-gold/30 p-6"><h2 className="text-xl font-bold">ITIN service fee</h2><p className="mt-3 text-gold">{formatItinFee(feeCategory.amount)}</p><p className="mt-3 leading-7 text-silver">{itinFeeScope}</p><p className="mt-3 leading-7 text-silver">{additionalChargesNotice}</p>{feeCategory.id === 'other' && <p className="mt-3 leading-7 text-silver">{otherCategoryNotice}</p>}{feeCategory.id === 'llc-bank-account' && <p className="mt-3 leading-7 text-silver">This category is for LLC owners with a US bank account. You must already have an LLC and its EIN number.</p>}{feeCategory.id === 'prepared-1040nr' && <p className="mt-3 leading-7 text-silver">The £395 fee applies only when your 1040-NR tax return is already prepared.</p>}<Link className="gold-button mt-5" href={`/?service=${feeCategory.id}#enquiry`}>Enquire about this service</Link></div></aside>}
       <div className="container-premium">
         <div className="mx-auto max-w-3xl border-t border-white/10 pt-8 text-sm leading-6 text-silver">General information only. Rules and forms change. ITIN Pro is independent and is not the IRS. The IRS decides whether to issue an ITIN. <Link className="text-gold underline" href="/#enquiry">Discuss your facts with us.</Link></div>
       </div>
