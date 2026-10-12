@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { invoiceAmount, invoiceSchema } from '@/lib/invoice-input';
 import { safeSecretEqual } from '@/lib/payment-security';
-import { logPaymentFailure, paymentConfigurationReady, paymentDatabase, stripeClient } from '@/lib/payments';
+import { logPaymentFailure, paymentConfigurationReady, paymentDatabase, stripeClient, verifySandboxCatalog } from '@/lib/payments';
 
 // Staff-only, sandbox-only. The customer form cannot choose extra fees or create invoices.
 export async function POST(request: Request) {
@@ -16,7 +16,11 @@ export async function POST(request: Request) {
   try {
     const body = input.data; const amount = invoiceAmount(body);
     const requestHash = createHash('sha256').update(JSON.stringify(body)).digest('hex');
-    const db = paymentDatabase(); const stripe = stripeClient();
+    const stripe = stripeClient();
+    stage = 'sandbox_catalog';
+    await verifySandboxCatalog(stripe);
+    stage = 'invoice_order';
+    const db = paymentDatabase();
     const inserted = await db.from('payment_orders').upsert({ id: body.requestId, kind: 'invoice', amount,
       currency: 'gbp', request_hash: requestHash }, { onConflict: 'id', ignoreDuplicates: true });
     if (inserted.error) throw inserted.error;
