@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { portalClient, portalEnabled, portalSession, sendPortalLink,ensurePortalBucket } from '@/lib/portal/server';
 import { sameOrigin } from '@/lib/portal/validation';
+import { portalTokenHashPattern } from '@/lib/portal/login-link';
 export const runtime='nodejs';
 export async function POST(request:Request) {
   if(!portalEnabled()) return NextResponse.json({error:'Portal testing is not enabled.'},{status:503});
@@ -16,7 +17,7 @@ export async function POST(request:Request) {
     }
     const db=await portalClient();
     if(body.action==='confirm'){
-      const hash=z.string().regex(/^[a-f0-9]{64}$/).parse(body.tokenHash);
+      const hash=z.string().regex(portalTokenHashPattern).parse(body.tokenHash);
       const type=z.enum(['magiclink','signup','invite']).parse(body.tokenType);
       const {error}=await db.auth.verifyOtp({token_hash:hash,type});
       if(error) return NextResponse.json({error:'This link has expired or has already been used. Request a new sign-in link.'},{status:400});

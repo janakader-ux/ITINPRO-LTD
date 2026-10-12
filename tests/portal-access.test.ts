@@ -1,3 +1,4 @@
+import { parsePortalLinkFragment,portalTokenHashPattern } from '../lib/portal/login-link';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { GET as casesGet,POST as casesPost } from '../app/api/portal/cases/route';
@@ -16,7 +17,7 @@ test('disabled portal and cross-origin writes cannot reach authentication, email
 test('sign-in links are sent only to existing accounts or the configured first staff member, with safe URL fragments',async()=>{
   const keys=['SUPABASE_URL','SUPABASE_SERVICE_ROLE_KEY','RESEND_API_KEY','PORTAL_STAFF_EMAIL','PAYMENT_TOKEN_SECRET','APP_URL'];
   const before=Object.fromEntries(keys.map(k=>[k,process.env[k]]));const fetch=globalThis.fetch;const info=console.info;
-  let generated=0,sent=0;const hash='b'.repeat(64);let mail='';const logs:string[]=[];
+  let generated=0,sent=0;const hash='b'.repeat(56);let mail='';const logs:string[]=[];
   try{Object.assign(process.env,{SUPABASE_URL:'https://test.supabase.co',SUPABASE_SERVICE_ROLE_KEY:'TEST_ONLY',RESEND_API_KEY:'TEST_ONLY',PORTAL_STAFF_EMAIL:'staff@example.com',PAYMENT_TOKEN_SECRET:'TEST_ONLY_SECRET',APP_URL:'https://itinpro.uk'});
     console.info=(...a)=>logs.push(a.join(' '));
     globalThis.fetch=async(input,options)=>{const url=String(input);const headers={'Content-Type':'application/json'};
@@ -43,4 +44,18 @@ test('Render proxy accepts only the configured public portal origin and email li
     assert(!sameOrigin(new Request('http://localhost:10000/api/portal/auth')));
     assert.equal(portalOrigin(),'https://itinpro-uk.onrender.com');
   }finally{for(const k of keys){if(before[k]===undefined)delete process.env[k];else process.env[k]=before[k];}}
+});
+
+test('confirmation parses actual Supabase SHA-224 links and refuses missing or malformed credentials',()=>{
+  for(const length of [56,64]){
+    const hash='a'.repeat(length);
+    assert.deepEqual(parsePortalLinkFragment(`#token_hash=${hash}&type=signup`),{tokenHash:hash,tokenType:'signup'});
+    assert(portalTokenHashPattern.test(hash));
+  }
+  for(const hash of ['a'.repeat(55),'a'.repeat(57),'g'.repeat(56),'']){
+    assert.equal(parsePortalLinkFragment(`#token_hash=${hash}&type=signup`),null);
+    assert(!portalTokenHashPattern.test(hash));
+  }
+  assert.equal(parsePortalLinkFragment(''),null);
+  assert.equal(parsePortalLinkFragment(`#token_hash=${'a'.repeat(56)}&type=recovery`),null);
 });
