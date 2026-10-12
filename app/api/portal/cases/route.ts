@@ -4,10 +4,11 @@ import { z } from 'zod';
 import { paymentDatabase,stripeClient,verifySandboxCatalog } from '@/lib/payments';
 import { portalEnabled,portalSession,portalBucket,uploadsEnabled,ensurePortalBucket,sendPortalLink,safePortalError } from '@/lib/portal/server';
 import { getApplicationRoute,routeChecklist,routeFee,checklistVersion } from '@/lib/portal/checklists';
-import { sameOrigin,caseInput,answersInput,validateFile } from '@/lib/portal/validation';
+import { sameOrigin,caseInput,answersInput,foreignAddressInput,validateFile } from '@/lib/portal/validation';
 import { engagementSnapshot } from '@/lib/portal/engagement';
 import { queuePortalNotice,repairAndRetryNotices } from '@/lib/portal/notifications';
 import { compatibleApplicationRoutes,sandboxRecipient } from '@/lib/portal/case-options';
+import { normalizeQuestionnaireAnswers } from '@/lib/portal/questionnaire';
 export const runtime='nodejs';
 const json=(body:unknown,status=200)=>NextResponse.json(body,{status,headers:{'Cache-Control':'no-store'}});
 async function context(caseId?:string) {
@@ -47,7 +48,8 @@ export async function GET(request:Request) {
     const results=await Promise.all(names.map(name=>s.db.from(name).select('*').eq('case_id',s.c!.id)));
     for(const result of results)if(result.error)throw result.error;
     const value=Object.fromEntries(names.map((name,i)=>[name,results[i].data]));
-    return json({case:s.c,role:s.account.role,staffMfa:s.staff,uploadsEnabled:uploadsEnabled(),...value});
+    const owner=await s.db.from('portal_accounts').select('email').eq('user_id',s.c.owner_id).single();if(owner.error)throw owner.error;
+    return json({clientEmail:owner.data.email,case:s.c,role:s.account.role,staffMfa:s.staff,uploadsEnabled:uploadsEnabled(),...value});
   }catch(error){const code=safePortalError(error);return json({error:code},code==='SIGN_IN_REQUIRED'?401:code==='CASE_NOT_FOUND'?404:code==='STAFF_MFA_REQUIRED'?403:503);}
 }
 export async function POST(request:Request) {
@@ -128,7 +130,10 @@ export async function POST(request:Request) {
     }
     if(body.action==='answers'){
       if(s.user.id!==c.owner_id || !['collecting','review','missing_information'].includes(c.status))throw new Error('INVALID_INPUT');
-      const input=answersInput.parse(body.answers);
+      if(!body.answers || typeof body.answers!=='object' || Array.isArray(body.answers))return json({error:'Please check the questionnaire answers.'},400);
+      const parsed=answersInput.safeParse(normalizeQuestionnaireAnswers(body.answers,s.user.email!));
+      if(!parsed.success){const foreign=parsed.error.issues.some(x=>['foreignAddress','foreignCountry'].includes(String(x.path[0])));return json({error:foreign?'Foreign address is mandatory. Enter a complete foreign address and select its non-US country. If you need help, contact the CAA before sending for review.':'Please check the questionnaire fields.',fields:[...new Set(parsed.error.issues.map(x=>String(x.path[0])))]},400);}
+      const input=parsed.data;
       const r=await s.admin.from('portal_answers').upsert({case_id:c.id,answers:input,updated_at:new Date().toISOString()});if(r.error)throw r.error;
       await audit(s.admin,c.id,s.user.id,'questionnaire_saved');return json({ok:true});
     }
@@ -139,6 +144,8 @@ export async function POST(request:Request) {
     }
     if(body.action==='submit'){
       if(s.user.id!==c.owner_id)throw new Error('INVALID_INPUT');await canUpload(s.admin,c);
+      const answers=await s.admin.from('portal_answers').select('answers').eq('case_id',c.id).maybeSingle();if(answers.error)throw answers.error;
+      if(!foreignAddressInput.safeParse(answers.data?.answers).success)return json({error:'Complete and save the mandatory foreign address and non-US country in Information before sending documents for review.'},400);
       const r=await s.admin.from('portal_cases').update({status:'review'}).eq('id',c.id).in('status',['collecting','missing_information']);if(r.error)throw r.error;
       await audit(s.admin,c.id,s.user.id,'review_requested');return json({ok:true});
     }
@@ -172,6 +179,7 @@ export async function POST(request:Request) {
     if(body.action==='retry-notices'){return json({ok:true,notification:await repairAndRetryNotices(c.id)});}
     if(body.action==='stage'){
       const stage=z.enum(['verification','submitted','complete']).parse(body.stage);
+      if(stage==='submitted'){const answers=await s.admin.from('portal_answers').select('answers').eq('case_id',c.id).maybeSingle();if(answers.error)throw answers.error;if(!foreignAddressInput.safeParse(answers.data?.answers).success)return json({error:'Mandatory foreign-address information is missing. Request and review it before recording submission.'},400);}
       const details=stage==='verification'?z.object({verifier:z.string().trim().min(2).max(100),route:z.enum(['in-person','video-with-original-in-hand','issuing-agency-certified-copy']),originalDocumentHeld:z.literal(true),interviewConducted:z.literal(true),originalW7Signature:z.literal(true)}).parse(body.details):stage==='submitted'?z.object({reference:z.string().trim().min(3).max(200)}).parse(body.details):{};
       const r=await s.admin.rpc('portal_record_stage',{p_case:c.id,p_actor:s.user.id,p_stage:stage,p_details:details});if(r.error)throw new Error('INVALID_INPUT');return json({ok:true,message:'Sandbox stage recorded. No application was submitted to the IRS.'});
     }

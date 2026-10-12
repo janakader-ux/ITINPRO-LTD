@@ -1,3 +1,9 @@
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { QuestionnaireFields } from '../components/portal/QuestionnaireFields';
+import { basicFields } from '../lib/portal/fields';
+import { selectOptions,normalizeQuestionnaireAnswers,countryOptions } from '../lib/portal/questionnaire';
+import { foreignAddressInput } from '../lib/portal/validation';
 import { compatibleApplicationRoutes,sandboxRecipient } from '../lib/portal/case-options';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -58,4 +64,33 @@ test('ITIN case choices exclude EIN and price/category mismatches; test recipien
   assert.throws(()=>sandboxRecipient({...synthetic,email:'realpayer@example.test'},'tester@example.test'));
   assert.throws(()=>sandboxRecipient({...synthetic,message:'A real client enquiry'},'tester@example.test'));
   assert.throws(()=>sandboxRecipient(synthetic,'invalid-email'));
+});
+
+test('foreign address is mandatory and US countries or blank details cannot progress; address/email choices copy safely',()=>{
+  const valid={foreignAddress:'1 TEST Road, Test City, TEST POSTCODE',foreignCountry:'United Kingdom'};
+  assert(foreignAddressInput.safeParse(valid).success);
+  assert(answersInput.safeParse(valid).success);
+  for(const invalid of [{},{...valid,foreignAddress:'   '},{...valid,foreignCountry:''},{...valid,foreignCountry:'United States'},{...valid,foreignCountry:'USA'}]){
+    assert(!foreignAddressInput.safeParse(invalid).success);
+    assert(!answersInput.safeParse(invalid).success);
+  }
+  const copied=normalizeQuestionnaireAnswers({...valid,mailingAddressChoice:'Same as foreign address',mailingAddress:'',mailingCountry:'',contactEmailChoice:'Use my portal email',contactEmail:'injected@example.test'},'tester@example.test');
+  assert.equal(copied.mailingAddress,valid.foreignAddress);assert.equal(copied.mailingCountry,valid.foreignCountry);assert.equal(copied.contactEmail,'tester@example.test');
+  assert(!answersInput.safeParse({...valid,role:'staff'}).success);
+  assert(!answersInput.safeParse({...valid,contactEmailChoice:'Use another contact email',contactEmail:''}).success);
+  const different=normalizeQuestionnaireAnswers({...valid,mailingAddressChoice:'Different mailing address',mailingAddress:'2 OTHER TEST Road',contactEmailChoice:'Use another contact email',contactEmail:'alternative@example.test'},'tester@example.test');
+  assert.equal(different.mailingAddress,'2 OTHER TEST Road');assert.equal(different.contactEmail,'alternative@example.test');assert(answersInput.safeParse(different).success);
+  assert(selectOptions.filingStatus?.includes('Married filing jointly'));assert(selectOptions.visaType?.includes('F-1'));assert(countryOptions.includes('United States'));
+});
+
+test('questionnaire renders mandatory foreign inputs, dropdowns and live copied addresses without losing saved dates',()=>{
+  const html=renderToStaticMarkup(createElement(QuestionnaireFields,{fields:[...basicFields],answers:{foreignAddress:'1 TEST Road, Test City',foreignCountry:'United Kingdom',mailingAddressChoice:'Same as foreign address',mailingAddress:'OLD ADDRESS',contactEmailChoice:'Use my portal email',contactEmail:'old@example.test',dateOfBirth:'01/01/1980'},clientEmail:'tester@example.test',readOnly:false,onChange:()=>{}}));
+  assert.match(html,/<select[^>]*name="foreignCountry"[^>]*required/);
+  assert.match(html,/<textarea[^>]*name="foreignAddress"[^>]*required/);
+  assert.match(html,/<select[^>]*name="filingStatus"/);
+  assert.match(html,/<select[^>]*name="visaType"/);
+  assert.match(html,/<textarea[^>]*name="mailingAddress"[^>]*disabled[^>]*>1 TEST Road, Test City/);
+  assert.match(html,/<input[^>]*name="contactEmail"[^>]*value="tester@example.test"/);
+  assert.match(html,/<input(?=[^>]*name="dateOfBirth")(?=[^>]*type="text")(?=[^>]*value="01\/01\/1980")[^>]*>/);
+  assert(!html.includes('OLD ADDRESS'));
 });
