@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { basicServiceQuestions, basicQuestionError, summarizeBasicQuestions } from './basic-service-questions';
 import { getItinCategory } from './itin-pricing';
 import { getApplicationRoute } from './portal/checklists';
 
@@ -21,8 +22,13 @@ export const simpleIntakeSchema = z.object({
   taxReason: z.enum(taxReturnReasons).optional(),
   preference: z.enum(['online', 'contact']),
   readiness: z.enum(['yes', 'no']).optional(),
+  basic: z.record(z.string().max(80),z.string().trim().max(1000)),
   consent: z.literal('yes'), website: z.string().max(0).optional(),
 }).superRefine((v, ctx) => {
+  for(const field of basicServiceQuestions(v.service,v.applicationRoute||'',v.basic)){
+    const error=basicQuestionError(field,v.basic[field.id]);
+    if(error)ctx.addIssue({code:'custom',path:['basic',field.id],message:error});
+  }
   if (v.service === 'itin' && !getApplicationRoute(v.applicationRoute || ''))
     ctx.addIssue({code:'custom',path:['applicationRoute'],message:'Choose an application category.'});
   if (v.service === 'tax' && !v.taxReason)
@@ -41,12 +47,12 @@ export function normalizeSimpleIntake(v: z.infer<typeof simpleIntakeSchema>) {
   return {
     name: `${v.firstName} ${v.lastName}`, email:v.email, phone:v.phone,
     reason:route?.title || v.taxReason || category.label, serviceCategory:category.id,
-    location:'To be confirmed privately', appointment:'To be arranged',
+    location:[v.basic.town,v.basic.residenceCountry].filter(Boolean).join(', '), appointment:'To be arranged',
     llcAndEinConfirmed:undefined,
     message:[`Short service intake: ${v.service.toUpperCase()}`,`First name: ${v.firstName}`,`Last name: ${v.lastName}`,
       `Application / filing reason: ${route?.title || v.taxReason || category.label}`,
       `Client preference: ${v.preference === 'online' ? 'Complete the application online' : 'Contact me; I will send information by email'}`,
-      `Ready to proceed: ${v.readiness || 'Not requested for this enquiry'}`,next].join('\n'),
+      `Ready to proceed: ${v.readiness || 'Not requested for this enquiry'}`,summarizeBasicQuestions(v.service,v.applicationRoute||'',v.basic),next].join('\n'),
     consent:v.consent, website:v.website,
   };
 }

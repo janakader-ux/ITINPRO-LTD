@@ -4,20 +4,20 @@
 
 Three navigation choices: **ITIN/EIN Tax Return Service**, **ITIN Application**, **List of Information Required**. The service overview contains separate ITIN, EIN and U.S. tax-return cards, each with **Click Here**. The initial application selector is labelled **You want to**. All 24 reviewed ITIN situations remain available in the category dropdown; the corresponding canonical fee appears directly below. EIN is £375 all-inclusive, no VAT. Tax-return preparation is quoted separately.
 
-The short service selector is placed ahead of the detailed home-page guides. A client sees a short optional checklist rather than immigration evidence or exception instructions. First name, last name, email and phone are mandatory for every request. Names and contact information are entered, rather than restricted to dropdowns. Country, status and other constrained application fields use dropdowns privately.
+The short service selector is placed ahead of the detailed home-page guides. A client sees a short optional checklist rather than immigration evidence or exception instructions. First name, last name, email and phone are mandatory for every request. A second short screen collects service-specific basic information for both online and contact requests, using dropdowns and Not sure options. Optional questions are collapsed. Names and contact information are entered, rather than restricted to dropdowns. Country, status and other constrained application fields use dropdowns privately.
 
 Every service offers:
 
 - **A. I would like to complete the form application here.**
 - **B. I just want somebody to contact me, and I will send the information via email.**
 
-Online ITIN and EIN choices then ask **Are you ready to proceed?** with explicit Yes/No buttons. No and contact-only requests go to staff without checkout. The public form collects no passport, SSN, ITIN, EIN or company identifiers.
+Online ITIN and EIN choices then ask **Are you ready to proceed?** with explicit Yes/No buttons. No and contact-only requests go to staff without checkout. The public form collects no passport numbers, SSNs, ITINs, EINs or banking identifiers. It collects service-specific basics for both choices; see BASIC-SERVICE-FORMS.md.
 
 ## Chosen order
 
 1. Select service/category and see the fee.
 2. Select online or contact assistance; confirm readiness for online applications.
-3. Submit the four contact details and privacy consent.
+3. Submit the four contact details, service-specific basic answers and privacy consent.
 4. Staff confirms the application route and issues the appropriate service-specific engagement.
 5. Client accepts the engagement electronically; staff arranges payment.
 6. After confirmed payment, invite the client to complete the relevant private application and upload documents now or later.
@@ -31,9 +31,9 @@ Route confirmation is a short staff handoff, not an extra public questionnaire. 
 
 | Service | Initial request | Private work after engagement/payment |
 | --- | --- | --- |
-| ITIN | Category, fee, contact preference, readiness, four contact fields | Internal W-7 preparation information or completed W-7 upload, mandatory foreign-address information, relevant evidence and supporting-letter draft where appropriate |
-| EIN | £375 fee, short company formation/SS-4 checklist, contact preference, readiness, four contact fields | Separate EIN engagement; formation evidence; legal/trade name, mailing/physical address, responsible party and identifier/eligibility, entity/LLC type and members, reason, dates/accounting month, business activity, employees/first wages where relevant and prior EIN history; reviewed SS-4 and applicable signature/designee authorisation. No Form 8821 intake. |
-| Tax return | Filing reason dropdown and four contact fields, contact preference | Staff contact and quote. No public tax questionnaire, uploads or checkout. Detailed return information only after separately agreed scope. |
+| ITIN | Category, fee, contact preference, readiness, contact fields and short applicant/renewal basics | Internal W-7 preparation information or completed W-7 upload, mandatory foreign-address information, relevant evidence and supporting-letter draft where appropriate |
+| EIN | £375 fee, contact preference, readiness, contact fields and basic company/SS-4 intake | Separate EIN engagement; formation evidence; legal/trade name, mailing/physical address, responsible party and identifier/eligibility, entity/LLC type and members, reason, dates/accounting month, business activity, employees/first wages where relevant and prior EIN history; reviewed SS-4 and applicable signature/designee authorisation. No Form 8821 intake. |
+| Tax return | Filing reason, tax year, contact preference, contact fields and basic filing/document history | Staff contact and quote. No full tax-preparation questionnaire, uploads or checkout. Detailed return information only after separately agreed scope. |
 
 The tax reason list includes 1040-NR, 1040/joint filing, rental, property sale, partnership, pension, royalties/investments, employment/scholarship, withholding refund and amended/overdue returns, plus a request for advice. This is enquiry triage, not a determination of filing status.
 

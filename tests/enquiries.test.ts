@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { itinBasics } from './fixtures/basic-intake';
 import assert from 'node:assert/strict';
 import { POST } from '../app/api/enquiries/route';
 
@@ -7,7 +8,7 @@ test('enquiry route validates inputs, distinguishes malformed config and does no
   const before=Object.fromEntries(keys.map(k=>[k,process.env[k]]));
   const originalFetch=globalThis.fetch; const originalError=console.error;const originalInfo=console.info;
   const logs:string[]=[]; console.error=(...args)=>logs.push(args.join(' ')); console.info=()=>{};
-  let fetches=0;let savedReason='';
+  let fetches=0;let savedReason='';let savedMessage='';
   const payload={name:'AUTOMATED TEST ONLY',email:'test@example.com',reason:'browser tampered price £1',serviceCategory:'spouse',
     location:'Bedford, UK (synthetic test)',appointment:'Not sure',message:'AUTOMATED TEST ONLY. Do not follow up.',consent:'yes',website:'',amount:100};
   const request=(body:unknown)=>new Request('https://itinpro-uk.onrender.com/api/enquiries',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
@@ -17,7 +18,7 @@ test('enquiry route validates inputs, distinguishes malformed config and does no
     globalThis.fetch=async(input,options)=>{
       fetches++;const url=String(input);
       if(url.includes('/rest/v1/enquiries')) {
-        savedReason=JSON.parse(String(options?.body)).reason;
+        savedReason=JSON.parse(String(options?.body)).reason;savedMessage=JSON.parse(String(options?.body)).message;
         return new Response(JSON.stringify({id:'11111111-1111-4111-8111-111111111111'}),{status:201,headers:{'Content-Type':'application/json'}});
       }
       if(url.startsWith('https://api.resend.com/'))return new Response(JSON.stringify({name:'validation_error',message:'API key is invalid'}),{status:400,headers:{'Content-Type':'application/json'}});
@@ -34,8 +35,9 @@ test('enquiry route validates inputs, distinguishes malformed config and does no
     assert.ok(logs.some(x=>x.includes('INVALID_EMAIL_API_KEY')));
     assert.ok(savedReason.includes('£395'));assert.ok(!savedReason.includes('£1'));
     process.env.PAYMENTS_ENABLED='true';process.env.STRIPE_SECRET_KEY='sk_test_SYNTHETIC';process.env.STRIPE_WEBHOOK_SECRET='whsec_SYNTHETIC';process.env.PAYMENT_TOKEN_SECRET='SYNTHETIC_SECRET';
-    const simple=await POST(request({flowVersion:'simple-v1',firstName:'Test',lastName:'Applicant',email:'test@example.com',phone:'+44 123456789',service:'itin',applicationRoute:'llc-bank-account',preference:'online',readiness:'yes',consent:'yes'}));
-    assert.equal(simple.status,201);assert.equal((await simple.json()).checkoutToken,undefined,'short intake must not offer payment before engagement');assert.match(savedReason,/£425/);
+    const simple=await POST(request({flowVersion:'simple-v1',firstName:'Test',lastName:'Applicant',email:'test@example.com',phone:'+44 123456789',service:'itin',applicationRoute:'llc-bank-account',basic:itinBasics,preference:'online',readiness:'yes',consent:'yes'}));
+    assert.equal(simple.status,201);assert.equal((await simple.json()).checkoutToken,undefined,'short intake must not offer payment before engagement');assert.match(savedReason,/£425/);assert.match(savedMessage,/Country where you currently live: United Kingdom/);
+    const count=fetches;const missingBasics=await POST(request({flowVersion:'simple-v1',firstName:'Test',lastName:'Applicant',email:'test@example.com',phone:'+44 123456789',service:'ein',preference:'contact',basic:{},consent:'yes'}));assert.equal(missingBasics.status,400);assert.equal(fetches,count);
     const rejected=await POST(request({flowVersion:'unknown',...payload}));assert.equal(rejected.status,400,'new intake must not fall through to legacy checkout');
     assert.ok(!logs.join(' ').includes(payload.email));assert.ok(!logs.join(' ').includes('TEST_ONLY_SERVICE_KEY'));
   } finally {
