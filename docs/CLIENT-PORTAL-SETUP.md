@@ -38,6 +38,8 @@ Portal updates use Resend and fixed idempotency keys. Notification outbox rows r
 
 ## Checklist coverage and source handling
 
+See [Application document instructions](APPLICATION-DOCUMENT-INSTRUCTIONS.md) for the expanded 24-route matrix and client signing instructions. The new routes separate resident returns, visa-holder families, student returns, treaty wages, treaty/non-treaty scholarships and business/resident bank interest. Questionnaire fields now include the applicable institution, payer/year, property transaction, tax benefit and signing-authority information. New cases use checklist version `2026-10-12.2`; existing signed engagement snapshots are preserved.
+
 The guide covers spouse, dependent/child, renewal, prepared 1040-NR, LLC distribution, LLC bank-account, partnership, rental, FIRPTA, pension/IRA, estate, wages/scholarship/treaty compensation, gambling, mortgage reporting, corporate reporting and Other routes. Canonical existing prices are reused. Unlisted routes use the agreed Other category provisionally, subject to review; no new Stripe prices were created.
 
 Source questionnaires are internal references. Original attachments have not been modified or published. The W-7 workbook supplies field groups; obsolete sample years are replaced by the approved case year. The engagement source is preserved as a versioned template. A clean code-native passport diagram replaces the watermarked stock preview; it illustrates the complete photograph/data page and facing top page, without identity data.
@@ -57,7 +59,7 @@ Official rule references checked 12 October 2026:
 
 ## Validation and remaining launch work
 
-Automated validation includes the existing 12 payment/enquiry tests plus seven portal tests (19 total): complete canonical route/fee mapping, source engagement substitution, attachment validation, same-origin guards, closed-mode protection, safe mail-link generation/recipient restrictions, and two real Postgres PGlite tests covering clients A/B, staff without/with MFA, anonymous access, revoked users, direct-write denial, role escalation denial, Storage-object isolation, agreement version/duplicate checks, early-work wait, draft release/approval replay, original-verification/submission gates and login throttling.
+Automated validation includes the existing 12 payment/enquiry tests plus eight portal tests (20 total): complete canonical route/fee mapping, source engagement substitution, attachment validation, same-origin guards, closed-mode protection, safe mail-link generation/recipient restrictions, and two real Postgres PGlite tests covering clients A/B, staff without/with MFA, anonymous access, revoked users, direct-write denial, role escalation denial, Storage-object isolation, agreement version/duplicate checks, early-work wait, draft release/approval replay, original-verification/submission gates and login throttling.
 
 These are isolated database/application tests, not an end-to-end proof of live Supabase Auth, mailbox delivery or Storage upload/download. Real uploads remain closed until those tests pass. SQL role/read-access checks and Supabase advisors are also run on the connected schema after migration.
 
