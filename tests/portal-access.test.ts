@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { GET as casesGet,POST as casesPost } from '../app/api/portal/cases/route';
 import { POST as authPost } from '../app/api/portal/auth/route';
+import { sameOrigin,portalOrigin } from '../lib/portal/validation';
 import { sendPortalLink } from '../lib/portal/server';
 test('disabled portal and cross-origin writes cannot reach authentication, email, database or Stripe',async()=>{
   const before=process.env.PORTAL_MODE;const fetch=globalThis.fetch;let calls=0;
@@ -29,4 +30,17 @@ test('sign-in links are sent only to existing accounts or the configured first s
     await sendPortalLink('staff@example.com',true);assert.equal(generated,1);assert.equal(sent,1);
     assert.match(mail,/#token_hash=/);assert.match(mail,/type=signup/);assert(!mail.includes('/confirm?'));assert(!logs.join(' ').includes(hash));assert(!logs.join(' ').includes('staff@example.com'));
   }finally{globalThis.fetch=fetch;console.info=info;for(const k of keys){if(before[k]===undefined)delete process.env[k];else process.env[k]=before[k];}}
+});
+
+test('Render proxy accepts only the configured public portal origin and email links use that host',()=>{
+  const keys=['NODE_ENV','RENDER_EXTERNAL_URL','APP_URL'];
+  const before=Object.fromEntries(keys.map(k=>[k,process.env[k]]));
+  try{
+    Object.assign(process.env,{NODE_ENV:'production',RENDER_EXTERNAL_URL:'https://itinpro-uk.onrender.com',APP_URL:'https://itinpro.uk'});
+    assert(sameOrigin(new Request('http://localhost:10000/api/portal/auth',{headers:{origin:'https://itinpro-uk.onrender.com'}})));
+    assert(!sameOrigin(new Request('http://localhost:10000/api/portal/auth',{headers:{origin:'https://attacker.example','x-forwarded-host':'attacker.example','x-forwarded-proto':'https'}})));
+    assert(!sameOrigin(new Request('http://localhost:10000/api/portal/auth',{headers:{origin:'https://itinpro.uk'}})));
+    assert(!sameOrigin(new Request('http://localhost:10000/api/portal/auth')));
+    assert.equal(portalOrigin(),'https://itinpro-uk.onrender.com');
+  }finally{for(const k of keys){if(before[k]===undefined)delete process.env[k];else process.env[k]=before[k];}}
 });

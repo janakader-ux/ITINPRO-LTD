@@ -1,3 +1,4 @@
+import { portalOrigin } from './validation';
 import { Resend } from 'resend';
 import { paymentDatabase } from '../payments';
 export async function queuePortalNotice(caseId:string,eventKey:string,recipient:'client'|'staff') {
@@ -12,7 +13,7 @@ export async function sendPendingNotices(caseId:string) {
   const c=await db.from('portal_cases').select('owner_id').eq('id',caseId).single();if(c.error)throw c.error;
   const owner=await db.from('portal_accounts').select('email').eq('user_id',c.data.owner_id).single();if(owner.error)throw owner.error;
   let accepted=0;const resend=new Resend(process.env.RESEND_API_KEY);
-  const origin=new URL(process.env.APP_URL || 'https://itinpro-uk.onrender.com').origin;
+  const origin=portalOrigin();
   for(const item of pending.data || []){
     try{
       const to=item.recipient==='staff'?process.env.PORTAL_STAFF_EMAIL?.trim():owner.data.email;

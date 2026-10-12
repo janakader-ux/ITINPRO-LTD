@@ -1,3 +1,4 @@
+import { portalOrigin } from './validation';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { paymentDatabase } from '../payments';
@@ -52,7 +53,7 @@ export async function sendPortalLink(email: string, bootstrapStaff=false) {
     const {error:insertError}=await admin.from('portal_accounts').insert({user_id:data.user.id,email,role:'staff'});
     if (insertError) throw insertError;
   }
-  const origin=new URL(process.env.APP_URL || 'https://itinpro-uk.onrender.com').origin;
+  const origin=portalOrigin();
   const tokenType=data.properties.verification_type;
   if(!['magiclink','signup','invite'].includes(tokenType))throw new Error('AUTH_LINK_FAILED');
   // URL fragments do not reach server access logs. Confirmation requires an explicit POST.

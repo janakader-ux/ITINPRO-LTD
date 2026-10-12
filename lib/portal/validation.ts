@@ -16,4 +16,13 @@ export function validateFile(bytes: Uint8Array, name: string, mime: string) {
   // Header validation is not virus scanning. Production collection remains disabled.
   return expected;
 }
-export function sameOrigin(request: Request) { const origin = request.headers.get('origin'); return !!origin && origin === new URL(request.url).origin; }
+export function portalOrigin(fallback = 'https://itinpro-uk.onrender.com') {
+  return new URL(process.env.RENDER_EXTERNAL_URL || process.env.APP_URL || fallback).origin;
+}
+export function sameOrigin(request: Request) {
+  const origin = request.headers.get('origin');
+  // Render terminates TLS before forwarding to Next.js. Use server-owned configuration,
+  // never caller-supplied Host or X-Forwarded-* headers, to identify the public origin.
+  const expected = process.env.NODE_ENV === 'production' ? portalOrigin(request.url) : new URL(request.url).origin;
+  return !!origin && origin === expected;
+}
