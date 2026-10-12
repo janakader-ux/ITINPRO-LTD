@@ -29,3 +29,19 @@ test('engagement uses source terms and canonical case details, with no unresolve
   assert(!JSON.stringify(e.snapshot).includes('{{'));assert.equal(e.sha256.length,64);
   assert.match(JSON.stringify(e.snapshot),/14 days/);assert.match(JSON.stringify(e.snapshot),/separate engagement letter/);
 });
+
+test('distinct IRS exception pathways keep required evidence and do not confuse scan approval with signing',()=>{
+  const text=(id:string)=>JSON.stringify(routeChecklist(id));
+  assert.match(text('wages-treaty'),/8233/);
+  assert.match(text('scholarship-treaty'),/W-8BEN/);
+  assert.match(text('scholarship-no-treaty'),/must accompany W-7/);
+  assert.match(text('business-bank-interest'),/effectively connected/);
+  assert.match(text('resident-bank-interest'),/resident-alien status/);
+  assert.match(text('gambling'),/gaming official acting as an IRS ITIN Acceptance Agent/);
+  assert.match(text('renewal'),/previous-year copy alone does not replace/);
+  assert.match(text('dependent'),/under age 6/);
+  assert.match(text('dependent'),/age 6 to under 18/);
+  assert.match(text('dependent'),/12 months/);
+  assert.equal(routeChecklist('partnership').find(x=>x.id==='partnership-letter')!.basis,'ITIN PRO');
+  for(const id of ['student-return','wages-treaty','scholarship-treaty','scholarship-no-treaty']) assert.equal(routeFee(id),55000);
+});
