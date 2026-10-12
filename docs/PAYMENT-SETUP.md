@@ -2,7 +2,7 @@
 
 The enquiry diagnostic deployment identified `INVALID_SUPABASE_URL` during client initialisation. The request failed before any database write or email attempt. Correct the project URL before further integration tests.
 
-Update, 12 October 2026: the correct ITIN PRO project is `atylicgpeeghiucrhigu` (`janakader-ux ITINPRO-LTD`). Its URL is now set in Render. The enquiry and payment schemas have been applied through the connected Supabase plugin, and database reconciliation/access tests passed. Supabase request logs now identify the remaining blocker as HTTP 401 `UNAUTHORIZED_INVALID_API_KEY`: replace Render's `SUPABASE_SERVICE_ROLE_KEY` with this project's server secret/service-role key. There are no saved enquiry records yet.
+Update, 12 October 2026: the correct ITIN PRO project is `atylicgpeeghiucrhigu` (`janakader-ux ITINPRO-LTD`). Its URL is now set in Render. The enquiry and payment schemas have been applied through the connected Supabase plugin, and database reconciliation/access tests passed. Supabase request logs now identify the remaining blocker as HTTP 401 `UNAUTHORIZED_INVALID_API_KEY`: replace Render's `SUPABASE_SERVICE_ROLE_KEY` with this project's server secret/service-role key. After replacing the key, three clearly marked synthetic enquiries were saved successfully (HTTP 201), with the spouse, EIN and Other fees verified. Staff email remains pending: the deployed diagnostic reports `INVALID_EMAIL_API_KEY` for `RESEND_API_KEY`. Replace that value securely in Render with a valid Resend sending key, then retest email.
 
 ## 1. Correct the database connection
 
