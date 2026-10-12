@@ -7,6 +7,7 @@ import { getApplicationRoute,routeChecklist,routeFee,checklistVersion } from '@/
 import { sameOrigin,caseInput,answersInput,validateFile } from '@/lib/portal/validation';
 import { engagementSnapshot } from '@/lib/portal/engagement';
 import { queuePortalNotice,repairAndRetryNotices } from '@/lib/portal/notifications';
+import { compatibleApplicationRoutes,sandboxRecipient } from '@/lib/portal/case-options';
 export const runtime='nodejs';
 const json=(body:unknown,status=200)=>NextResponse.json(body,{status,headers:{'Cache-Control':'no-store'}});
 async function context(caseId?:string) {
@@ -39,7 +40,7 @@ export async function GET(request:Request) {
       if(!s.staff)throw new Error('STAFF_MFA_REQUIRED');
       const {data,error}=await s.admin.from('payment_orders').select('id,service_category,amount,enquiries!inner(name,email,message)').eq('kind','checkout').eq('status','paid').order('created_at',{ascending:false}).limit(30);
       if(error)throw error;
-      return json({orders:(data||[]).filter(x=>{const e=x.enquiries as unknown as {email:string;message:string};return e.email.endsWith('@example.com') && e.message.startsWith('AUTOMATED TEST ONLY');}).map(x=>({id:x.id,category:x.service_category,amount:x.amount}))});
+      return json({orders:(data||[]).filter(x=>{const e=x.enquiries as unknown as {email:string;message:string};return e.email.endsWith('@example.com') && e.message.startsWith('AUTOMATED TEST ONLY') && compatibleApplicationRoutes({category:x.service_category,amount:x.amount}).length>0;}).map(x=>({id:x.id,category:x.service_category,amount:x.amount})),testClientEmail:process.env.PORTAL_TEST_CLIENT_EMAIL?.trim().toLowerCase() || null});
     }
     if(!s.c){const {data,error}=await s.db.from('portal_cases').select('id,legal_name,route_id,status,created_at').order('created_at',{ascending:false}).limit(100);if(error)throw error;return json({cases:data,role:s.account.role,staffMfa:s.staff});}
     const names=['portal_answers','portal_agreements','portal_documents','portal_requests','portal_approvals'] as const;
@@ -88,24 +89,33 @@ export async function POST(request:Request) {
       const s=await context();if(!s.staff)throw new Error('STAFF_MFA_REQUIRED');
       const input=caseInput.parse(body.input);const route=getApplicationRoute(input.routeId)!;
       const {data:order,error:oe}=await s.admin.from('payment_orders').select('*').eq('id',input.orderId).single();
+      if(!oe && !compatibleApplicationRoutes({category:order.service_category,amount:order.amount}).some(x=>x.id===input.routeId))return json({error:'This payment does not match the selected ITIN route. Choose a matching ITIN test order; EIN orders cannot be used here.'},400);
       if(oe || order.status!=='paid' || order.kind!=='checkout' || order.amount!==routeFee(input.routeId) || order.service_category!==route.priceCategory || order.currency!=='gbp')throw new Error('PAYMENT_REQUIRED');
       const {data:e,error:ee}=await s.admin.from('enquiries').select('email,message').eq('id',order.enquiry_id).single();
       if(ee || !e.email.toLowerCase().endsWith('@example.com') || !e.message.startsWith('AUTOMATED TEST ONLY') || !/TEST/i.test(input.legalName))throw new Error('SANDBOX_ONLY');
       const stripe=stripeClient();await verifySandboxCatalog(stripe);
       const remote=await stripe.checkout.sessions.retrieve(order.stripe_checkout_session_id);
       if(remote.livemode || remote.payment_status!=='paid' || remote.amount_total!==order.amount || remote.currency!=='gbp' || remote.metadata?.order_id!==order.id)throw new Error('PAYMENT_REQUIRED');
-      // Exact matching payer account; no client-supplied recipient email.
-      const {data:link,error:le}=await s.admin.auth.admin.generateLink({type:'magiclink',email:e.email.toLowerCase()});
-      if(le || !link.user)throw le || new Error('AUTH_ACCOUNT_FAILED');
-      const a=await s.admin.from('portal_accounts').upsert({user_id:link.user.id,email:e.email.toLowerCase(),role:'client'}, {onConflict:'user_id',ignoreDuplicates:true});if(a.error)throw a.error;
+      const recipient=sandboxRecipient(e,process.env.PORTAL_TEST_CLIENT_EMAIL);
+      let nominatedUserId:string|undefined;
+      if(recipient!==e.email.toLowerCase()){
+        const nominee=await s.admin.from('portal_accounts').select('user_id,email,role,active').eq('email',recipient).maybeSingle();
+        if(nominee.error || !nominee.data || nominee.data.role!=='client' || !nominee.data.active)return json({error:'The nominated client-test account is not ready. Sign in to that client account first.'},400);
+        nominatedUserId=nominee.data.user_id;
+      }
+      // Named tester override applies only to synthetic sandbox orders. The paid
+      // Stripe session, category, amount and staff MFA checks above remain required.
+      const {data:link,error:le}=await s.admin.auth.admin.generateLink({type:'magiclink',email:recipient});
+      if(le || !link.user || link.user.email?.toLowerCase()!==recipient || (nominatedUserId && link.user.id!==nominatedUserId))throw le || new Error('AUTH_ACCOUNT_FAILED');
+      const a=await s.admin.from('portal_accounts').upsert({user_id:link.user.id,email:recipient,role:'client'}, {onConflict:'user_id',ignoreDuplicates:true});if(a.error)throw a.error;
       const {data:account,error:ace}=await s.admin.from('portal_accounts').select('role,active,email').eq('user_id',link.user.id).single();
-      if(ace || account.role!=='client' || !account.active || account.email!==e.email.toLowerCase())throw new Error('INVALID_INPUT');
+      if(ace || account.role!=='client' || !account.active || account.email!==recipient)throw new Error('INVALID_INPUT');
       const inserted=await s.admin.from('portal_cases').upsert({owner_id:link.user.id,payment_order_id:order.id,legal_name:input.legalName,address:input.address,route_id:input.routeId,price_category:route.priceCategory,fee:order.amount,tax_year:input.taxYear,checklist_version:checklistVersion,test_only:true},{onConflict:'payment_order_id',ignoreDuplicates:true}).select('*').maybeSingle();
       if(inserted.error)throw inserted.error;
-      if(!inserted.data){const existing=await s.admin.from('portal_cases').select('*').eq('payment_order_id',order.id).single();if(existing.error)throw existing.error;if(existing.data.route_id!==input.routeId || existing.data.legal_name!==input.legalName || existing.data.address!==input.address || existing.data.tax_year!==input.taxYear)return json({error:'This payment already has a different case.'},409);const repaired=await s.admin.from('portal_agreements').upsert({case_id:existing.data.id,...engagementSnapshot(existing.data)},{onConflict:'case_id',ignoreDuplicates:true});if(repaired.error)throw repaired.error;return json({ok:true,caseId:existing.data.id});}
+      if(!inserted.data){const existing=await s.admin.from('portal_cases').select('*').eq('payment_order_id',order.id).single();if(existing.error)throw existing.error;if(existing.data.owner_id!==link.user.id || existing.data.route_id!==input.routeId || existing.data.legal_name!==input.legalName || existing.data.address!==input.address || existing.data.tax_year!==input.taxYear)return json({error:'This payment already has a different case.'},409);const repaired=await s.admin.from('portal_agreements').upsert({case_id:existing.data.id,...engagementSnapshot(existing.data)},{onConflict:'case_id',ignoreDuplicates:true});if(repaired.error)throw repaired.error;return json({ok:true,caseId:existing.data.id});}
       const snapshot=engagementSnapshot(inserted.data);
       const agreement=await s.admin.from('portal_agreements').insert({case_id:inserted.data.id,...snapshot});if(agreement.error)throw agreement.error;
-      await audit(s.admin,inserted.data.id,s.user.id,'case_created',{order_id:order.id,route:route.id});
+      await audit(s.admin,inserted.data.id,s.user.id,'case_created',{order_id:order.id,route:route.id,nominated_test_client:recipient!==e.email.toLowerCase()});
       await queuePortalNotice(inserted.data.id,`case-${inserted.data.id}`,'client').catch(()=>{});
       return json({ok:true,caseId:inserted.data.id},201);
     }
