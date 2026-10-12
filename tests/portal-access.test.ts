@@ -1,3 +1,4 @@
+import { authenticatorQrSource } from '../lib/portal/mfa-image';
 import { parsePortalLinkFragment,portalTokenHashPattern } from '../lib/portal/login-link';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -58,4 +59,13 @@ test('confirmation parses actual Supabase SHA-224 links and refuses missing or m
   }
   assert.equal(parsePortalLinkFragment(''),null);
   assert.equal(parsePortalLinkFragment(`#token_hash=${'a'.repeat(56)}&type=recovery`),null);
+});
+
+test('authenticator QR images preserve Supabase data URLs instead of encoding them twice',()=>{
+  const svg='<svg xmlns="http://www.w3.org/2000/svg"><rect width="10" height="10"/></svg>';
+  const url=`data:image/svg+xml;utf-8,${encodeURIComponent(svg)}`;
+  assert.equal(authenticatorQrSource(url),url);
+  assert.equal(decodeURIComponent(authenticatorQrSource(svg).split(',')[1]),svg);
+  assert.equal(authenticatorQrSource('https://attacker.example/qr.svg'),'');
+  assert.equal(authenticatorQrSource('data:text/html,<script/>'),'');
 });
