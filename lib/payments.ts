@@ -11,7 +11,7 @@ export function paymentConfigurationReady() {
 export function stripeClient() {
   const key = process.env.STRIPE_SECRET_KEY?.trim();
   if (!key || !/^(rk|sk)_test_/.test(key)) throw new Error('SANDBOX_KEY_REQUIRED');
-  return new Stripe(key, { apiVersion: '2026-08-26.dahlia', maxNetworkRetries: 2 });
+  return new Stripe(key, { apiVersion: '2026-08-26.dahlia', maxNetworkRetries: 2, httpClient: Stripe.createFetchHttpClient() });
 }
 
 export function paymentDatabase() {
