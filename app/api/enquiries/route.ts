@@ -4,6 +4,8 @@ import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import { z } from 'zod';
 import { getItinCategory, formatItinFee, serviceFeeScope, additionalChargesNotice, otherCategoryNotice } from '@/lib/itin-pricing';
+import { paymentConfigurationReady } from '@/lib/payments';
+import { createCheckoutToken } from '@/lib/payment-security';
 
 const schema = z.object({
   name: z.string().trim().min(2).max(100), email: z.email(),
@@ -77,5 +79,7 @@ export async function POST(request: Request) {
   } catch (error) { logFailure('email', requestId, error); }
   // Accept saved enquiries even if staff email fails; do not invite duplicate submissions.
   console.info('itinpro_enquiry_saved', JSON.stringify({ requestId, enquiryId, notification }));
-  return NextResponse.json({ ok: true, enquiryId, notification, requestId }, { status: 201 });
+  const checkoutToken = category.amount !== null && paymentConfigurationReady()
+    ? createCheckoutToken(enquiryId, category.id, process.env.PAYMENT_TOKEN_SECRET!) : undefined;
+  return NextResponse.json({ ok: true, enquiryId, notification, requestId, checkoutToken }, { status: 201 });
 }
