@@ -1,0 +1,41 @@
+import { Resend } from 'resend';
+import { paymentDatabase } from '../payments';
+export async function queuePortalNotice(caseId:string,eventKey:string,recipient:'client'|'staff') {
+  const db=paymentDatabase();
+  const insert=await db.from('portal_notifications').upsert({event_key:eventKey,case_id:caseId,recipient},{onConflict:'event_key',ignoreDuplicates:true});
+  if(insert.error)throw insert.error;
+  return sendPendingNotices(caseId);
+}
+export async function sendPendingNotices(caseId:string) {
+  const db=paymentDatabase();const pending=await db.from('portal_notifications').select('event_key,recipient').eq('case_id',caseId).eq('state','pending').limit(20);
+  if(pending.error)throw pending.error;
+  const c=await db.from('portal_cases').select('owner_id').eq('id',caseId).single();if(c.error)throw c.error;
+  const owner=await db.from('portal_accounts').select('email').eq('user_id',c.data.owner_id).single();if(owner.error)throw owner.error;
+  let accepted=0;const resend=new Resend(process.env.RESEND_API_KEY);
+  const origin=new URL(process.env.APP_URL || 'https://itinpro-uk.onrender.com').origin;
+  for(const item of pending.data || []){
+    try{
+      const to=item.recipient==='staff'?process.env.PORTAL_STAFF_EMAIL?.trim():owner.data.email;
+      if(!to)continue;
+      const r=await resend.emails.send({from:process.env.RESEND_FROM_EMAIL || 'ITIN PRO <enquiries@itinpro.uk>',to,
+        subject:'[SANDBOX TEST] ITIN PRO — secure portal update',text:`There is an update to your ITIN PRO case ${caseId}.\nSign in securely at ${origin}/portal to review the case and any outstanding actions.\nDocuments are available only in the portal. Do not reply with passports or tax identifiers.\nThis is the sandbox portal; do not upload real documents.`},{idempotencyKey:`portal/${item.event_key}`});
+      if(r.error || !r.data?.id)continue;
+      const saved=await db.from('portal_notifications').update({state:'accepted',provider_email_id:r.data.id}).eq('event_key',item.event_key).eq('state','pending');if(saved.error)continue;
+      accepted++;
+    }catch{ /* Keep the durable outbox entry pending for staff retry; never log PII. */ }
+  }
+  return {accepted,pending:(pending.data?.length||0)-accepted,delivery:'unverified' as const};
+}
+export async function repairAndRetryNotices(caseId:string) {
+  const db=paymentDatabase();
+  const requests=await db.from('portal_requests').select('id').eq('case_id',caseId);
+  const documents=await db.from('portal_documents').select('id,kind,visibility').eq('case_id',caseId);
+  if(requests.error || documents.error)throw requests.error || documents.error;
+  const entries=[{event_key:`case-${caseId}`,case_id:caseId,recipient:'client'},
+    ...(requests.data||[]).map(x=>({event_key:`request-${x.id}`,case_id:caseId,recipient:'client'})),
+    ...(documents.data||[]).flatMap(x=>[{event_key:`upload-${x.id}`,case_id:caseId,recipient:'staff'},
+      ...(x.kind==='draft' && x.visibility==='client'?[{event_key:`draft-${x.id}`,case_id:caseId,recipient:'client'}]:[]),
+      ...(['submission','outcome'].includes(x.kind) && x.visibility==='client'?[{event_key:`record-${x.id}`,case_id:caseId,recipient:'client'}]:[])])];
+  const insert=await db.from('portal_notifications').upsert(entries,{onConflict:'event_key',ignoreDuplicates:true});if(insert.error)throw insert.error;
+  return sendPendingNotices(caseId);
+}

@@ -1,0 +1,178 @@
+{
+  "version": "ITIN-2026-10-12-source",
+  "paragraphs": [
+    "ITIN PRO",
+    "ITIN,EIN and 1040 Services",
+    "ITIN Service Engagement Letter",
+    "Terms of engagement for the ITIN application service",
+    "Please read this letter carefully. It sets out the terms on which ITIN PRO LTD will provide the ITIN Service described below. This letter covers the ITIN Service only.",
+    "Reference: {{CASE_ID}} · Version: {{AGREEMENT_VERSION}} · Date: {{PRESENTED_AT}}",
+    "Client: {{CLIENT_LEGAL_NAME}} of {{CLIENT_ADDRESS}}",
+    "Service provider: ITIN PRO LTD (company number 17336134), 18 Sundew Close, Bedford, England, MK42 0SR (‘ITIN Pro’, ‘we’, ‘us’).",
+    "1. Our service",
+    "You appoint ITIN PRO LTD to provide the ITIN application service described in Schedule 1 (the “ITIN Service”). This letter covers the ITIN Service only.",
+    "Included: initial category review; preparing your Form W-7; identity and foreign-status review by our Certifying Acceptance Agent (“CAA”); Form W-7(COA) (Certificate of Accuracy) once clause 3 is satisfied; sending your application to the IRS; and routine status updates.",
+    "Not included: US tax returns (Form 1040, 1040-NR or other); legal or immigration advice; treaty opinions; third-party letters; certification of your documents; translations; courier costs; and IRS audits, notices or appeals.",
+    "Tax returns. Any US tax return will be prepared by our network firm under its own separate engagement letter and fees. ITIN Pro is not a party to that engagement.",
+    "2. Who can apply",
+    "You are not eligible for an ITIN, and we cannot submit an application for you, if:",
+    "you already hold a US Social Security number (SSN), or you are eligible for one; or",
+    "your passport shows the United States as your country of birth.",
+    "Sanctions. If you hold a passport issued by a sanctioned country, we have the right to refuse to verify your passport or to submit your application, as the governing sanctions and IRS rules require.",
+    "If we cannot proceed under this clause, we will refund the fee for work not yet done. Work already done and third-party costs remain payable. Tell us at once if your circumstances change, including if you are later assigned an SSN.",
+    "3. Passport and identity verification",
+    "We cannot compromise on this. The IRS requires your passport to be verified. We will not provide the Form W-7(COA) service until you have given us either (a) your original passport for inspection by our CAA, or (b) a passport copy certified by the issuing agency.",
+    "What our CAA does. ITIN Pro is a Certifying Acceptance Agent with an agreement with the IRS. Our CAA reviews your identity and foreign-status documents, certifies to the IRS that we have reviewed them, and keeps a record of them. We must follow the verification process and methods prescribed in the IRS’s published guidance and have no discretion to relax them. The IRS examines documents in very fine detail, and our certification is not binding on the IRS.",
+    "Your responsibility. You must give us true, authentic, complete and accurate documents. We do not audit them beyond our CAA review, and this service is not designed to detect fraud or irregularities. We are not responsible if the IRS questions or rejects documents as false or inaccurate.",
+    "Video interviews. Our CAA must physically hold the original passport (or certified copy) during the interview. Use tracked delivery and the return method in Schedule 1. We log receipt and return and take reasonable care of originals, but cannot promise that any postal or courier service is risk-free.",
+    "Form W-7. Your signature on Form W-7 lets us communicate with the IRS about your ITIN only. It is not a power of attorney.",
+    "If you cannot meet these requirements, or the information you give us presents a risk we are not willing to take, we may pause or withdraw from the engagement under clause 10.",
+    "4. Your responsibilities",
+    "Give us complete, accurate and current information and documents on time, review and sign drafts only when they are correct, and tell us at once if anything changes (name, address, SSN eligibility, tax position or any previous ITIN).",
+    "Obtain any third-party letters, attend the CAA interview and respond promptly to IRS notices.",
+    "Do not send passport scans, tax numbers or bank details by ordinary email. Use your private case link.",
+    "5. Fees",
+    "The fee for the ITIN Service is shown in section 1 and Schedule 1. It covers the ITIN Service only and is payable in advance by card through Stripe (we do not store your card details). The IRS does not charge a fee for an ITIN application; our fee is for our services. Courier, certification, translation and other third-party costs are extra only if shown in Schedule 1 or agreed in advance. If review shows a different category or extra work, we will pause and agree a revised fee with you. Fees for tax return work are separate and set out in our network firm’s own engagement letter. Work begins as set out in clause 7.",
+    "6. IRS decisions, resubmission and refunds",
+    "IRS decisions. The IRS, not ITIN Pro, decides whether to issue an ITIN, request more evidence or meet any timeframe. Although we act under an agreement with the IRS, we are an independent business and cannot influence or overrule IRS decisions. The IRS may reject or query even a carefully prepared application, so we do not guarantee an ITIN, a completion date or any tax result.",
+    "Our policy. We aim to have every application accepted at the first attempt. If the IRS rejects your application, our team will help you resubmit it at no extra professional fee, for up to four attempts in total (counting the first). If it is still rejected after the fourth attempt, we will refund your professional fee in full. Third-party costs already incurred are not refunded by us.",
+    "Outside our control. This policy applies where you have complied with this letter. It does not apply where a rejection or delay is caused by matters outside our control or your responsibility, such as: inaccurate, incomplete, false or late information or documents; failure to meet clause 3; ineligibility under clause 2; changes in IRS rules or forms; IRS delay, discretion or further requests; postal or courier loss; a third party’s refusal to provide documents; your failure to respond or sign correctly; your withdrawal; or events beyond our reasonable control.",
+    "7. Cancellation",
+    "Changed your mind? If you do not want the service, email Taz@itinpro.uk and Shan@itinpro.uk with your name and case reference on the day you sign or the next day at the latest, and we will refund your fee in full.",
+    "After that. Once we have begun work we cannot stop the process: you pay for the work done, which may be the whole fee once your documents are prepared. Once the application has been sent to the IRS it cannot be stopped or recalled and the fee is payable in full.",
+    "Consumers. If you are a consumer, you also have a statutory right to cancel within 14 days of the day after this contract is made. We begin work once you have signed, payment has cleared and you have asked us to start (see the acceptance section); otherwise we wait until the 14 days have passed. If you cancel after asking us to start, you pay for the work done, and the right ends once the service is fully performed.",
+    "8. Liability",
+    "Cap. Our total liability to you for all claims arising out of or in connection with the ITIN Service, whether in contract, tort (including negligence) or otherwise, and including any claim within our professional indemnity insurance, is limited to the professional fees you have paid for the ITIN Service. No liability beyond that amount can be claimed. To the extent the law allows, we are not liable for indirect or consequential loss, or for any IRS tax, interest, penalty or lost refund arising from matters outside our control. This does not limit any liability that cannot lawfully be limited, or your statutory consumer rights.",
+    "Your responsibility. You remain responsible for the accuracy of what you give us. The ITIN Service is for you only and no one else may rely on it.",
+    "9. Privacy, records and electronic signature",
+    "ITIN PRO LTD is the controller of your personal information, which we use to provide the ITIN Service, meet legal obligations and as described in our privacy notice. We use providers for hosting, storage, e-signature, payments and email, some of which (and the IRS) may be outside the United Kingdom; we use the safeguards the law requires. We share your information with our network firm only if you ask us to. CAA records may have to be kept for at least three calendar years after the year your application is mailed to the IRS; original documents are returned to you. You agree that notices and this agreement may be delivered and signed electronically.",
+    "10. Complaints, termination and governing law",
+    "Raise concerns first with Taz@itinpro.uk, copying Shan@itinpro.uk; we will acknowledge and give you a review timeframe. Either party may end the engagement for material breach. We may pause or end it if information appears false or unlawful, if the work is outside our authority, or if required documents are not provided; fees for completed work and third-party costs then remain payable, subject to clauses 2, 6 and 7 and consumer law. This agreement is governed by the law of England and Wales.",
+    "Schedule 1 — Case-specific service",
+    "Schedule 2 — ITIN applicant guidance: important do’s and don’ts",
+    "An ITIN is a US federal tax-processing number issued by the IRS to people who need a US taxpayer identification number for federal tax purposes but are not eligible for an SSN.",
+    "Do ",
+    "Apply only where there is a genuine US federal tax purpose and you are not eligible for an SSN.",
+    "Complete the current Form W-7 accurately and disclose any previous ITIN or IRS number.",
+    "Usually submit Form W-7 with a completed US federal tax return, unless an IRS exception applies and you provide the required evidence.",
+    "Provide valid identity and foreign-status documents: originals or copies certified by the issuing authority. Ordinary photocopies and notarised copies are not acceptable. A valid passport is best, as it normally proves both identity and foreign status.",
+    "Attend the CAA interview and bring the required identification documents.",
+    "Keep copies of your application, documents, tax returns and IRS correspondence.",
+    "Renew your ITIN when required, for example if it has not been used on a US federal tax return for three consecutive tax years.",
+    "Tell the IRS if you are later assigned an SSN, so your records can be linked.",
+    "Don’t ",
+    "Do not apply for or use an ITIN if you are eligible for an SSN, or keep using it once you have been assigned an SSN.",
+    "Do not use an ITIN as proof of immigration status, lawful residence, citizenship or permission to work. It gives no employment authorisation.",
+    "Do not use an ITIN to claim US Social Security or Medicare benefits, or in place of an SSN where an SSN is required, including on a California driver’s licence or identification-card application (follow the California DMV’s requirements).",
+    "Do not submit expired, altered, incomplete, photocopied or simply notarised identity documents.",
+    "Do not use another person’s ITIN, give false information or fail to disclose a previously issued ITIN.",
+    "Do not assume an ITIN makes you eligible for tax credits, benefits or a driver’s licence; that depends on each programme’s rules.",
+    "Do not use an ITIN for anything other than legitimate US federal tax administration.",
+    "Important notice. Our CAA can review your application and documents and submit the Certificate of Accuracy where permitted, but the IRS makes the final decision to issue, renew, reject or request more information. Do not rely on an ITIN as proof of identity, immigration status, work authorisation or benefit entitlement. Always check current requirements with the relevant authority before applying.",
+    "Electronic acceptance",
+    "Typed signature: {{CLIENT_SIGNATURE}}",
+    "Signed at: {{SIGNED_AT}}",
+    "Signer email: {{SIGNER_EMAIL}}",
+    "Audit certificate / envelope ID: {{SIGNATURE_AUDIT_ID}}"
+  ],
+  "tables": [
+    [
+      [
+        "Field",
+        "Selection"
+      ],
+      [
+        "Service",
+        "{{SERVICE_NAME}}"
+      ],
+      [
+        "W-7 reason / exception",
+        "{{W7_ROUTE}}"
+      ],
+      [
+        "Professional fee",
+        "£{{FEE_GBP}} — {{VAT_WORDING}}"
+      ],
+      [
+        "Travel/courier/third-party charges",
+        "{{ADDITIONAL_CHARGES}}"
+      ],
+      [
+        "Verification route",
+        "{{VERIFICATION_ROUTE}}"
+      ],
+      [
+        "Target tax year/current-year exception period",
+        "{{TAX_YEAR_OR_PERIOD}}"
+      ]
+    ],
+    [
+      [
+        "Item",
+        "Case value"
+      ],
+      [
+        "Applicant(s)",
+        "{{APPLICANT_NAMES}}"
+      ],
+      [
+        "Service/category",
+        "{{SERVICE_CATEGORY}}"
+      ],
+      [
+        "W-7 route and tax purpose",
+        "{{W7_ROUTE_AND_PURPOSE}}"
+      ],
+      [
+        "Required documents",
+        "{{REQUIRED_DOCUMENT_LIST}}"
+      ],
+      [
+        "Identity verification route",
+        "{{VERIFICATION_ROUTE_DETAIL}}"
+      ],
+      [
+        "Return/courier arrangement",
+        "{{COURIER_DETAIL}}"
+      ],
+      [
+        "Included IRS correspondence",
+        "{{CORRESPONDENCE_SCOPE}}"
+      ],
+      [
+        "Fee and VAT wording",
+        "£{{FEE_GBP}} · {{VAT_WORDING}}"
+      ],
+      [
+        "Additional agreed charges",
+        "{{ADDITIONAL_CHARGES}}"
+      ]
+    ],
+    [
+      [
+        "Declaration",
+        "Client action"
+      ],
+      [
+        "I have read and accept this engagement letter and Schedule 1.",
+        "{{ACCEPT_TERMS_CHECKBOX}}"
+      ],
+      [
+        "I confirm the information I supplied is accurate and the listed documents are available or will be obtained.",
+        "{{DOCUMENT_READINESS_CHECKBOX}}"
+      ],
+      [
+        "I confirm I do not hold an SSN, I am not eligible for one, and my passport does not show the United States as my country of birth. I understand the passport verification requirement in clause 3 and that the Form W-7(COA) service will not be provided until it is met.",
+        "{{IDENTITY_ROUTE_CHECKBOX}}"
+      ],
+      [
+        "I have read the privacy notice.",
+        "{{PRIVACY_ACK_CHECKBOX}}"
+      ],
+      [
+        "I ask ITIN Pro to begin work now, within the 14-day cancellation period. I understand that if I cancel after work has begun I must pay for the work done, and that my right to cancel ends once the service is fully performed.",
+        "{{START_EARLY_CHECKBOX}}"
+      ]
+    ]
+  ]
+}
