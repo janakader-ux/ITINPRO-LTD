@@ -22,6 +22,12 @@ These tables are already created on the connected ITIN PRO project. No manual SQ
 
 Keep `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, and `ENQUIRY_RECIPIENTS` configured in Render. Verify the sender domain in Resend. A saved enquiry returns HTTP 201 with its ID. `notification: "sent"` means the provider accepted the send; only provider delivery events or an inbox check prove delivery. `notification: "pending"` means the enquiry was saved but the staff email failed. Check `itinpro_enquiry_failure` logs for stage/code; no client details or keys are logged.
 
+## Read-only sandbox key check
+
+`GET /api/payments/status` verifies that the configured test key can read an existing ITIN PRO sandbox price. It never creates customers, enquiries, payments or invoices, and it works while `PAYMENTS_ENABLED=false`. HTTP 200 with `catalog: "ready"` proves access to the intended catalog; it does not prove payment completion or webhook reconciliation. Failures return a safe diagnostic code, never provider messages or credentials. Results are cached for 30 seconds.
+
+The automatic approval review rejected enabling checkout because the setup instructions said to keep payments disabled. Complete the read-only key check, then obtain explicit approval before setting `PAYMENTS_ENABLED=true` for sandbox payment and invoice tests.
+
 ## 3. Configure sandbox payments
 
 Use only ITIN PRO LTD sandbox `acct_1UPPNq050EnIRMqj`. The application rejects live keys and events.
