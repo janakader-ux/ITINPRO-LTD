@@ -32,6 +32,7 @@ test('checkout uses canonical prices and retries after a database-save failure w
         createRequests++;const params=String(options?.body);const headers=new Headers(options?.headers);const key=headers.get('idempotency-key') || '';
         const form=new URLSearchParams(params);
         assert.equal(form.get('line_items[0][price]'),'price_1UPQJ0050EnIRMqj4aodcTOK');
+        assert.equal(form.get('adaptive_pricing[enabled]'),'false','quoted fees must stay in GBP');
         assert.equal(form.has('payment_method_types[0]'),false);
         if(!creates){creates++;originalParams=params;originalKey=key;}
         else {assert.equal(params,originalParams);assert.equal(key,originalKey);}

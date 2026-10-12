@@ -40,6 +40,7 @@ export async function POST(request: Request) {
       throw new Error('STRIPE_PRICE_MISMATCH');
     stage = 'stripe_session';
     const session = await stripe.checkout.sessions.create({ mode: 'payment', customer_email: enquiry.data.email,
+      adaptive_pricing: { enabled: false },
       line_items: [{ price: price.priceId, quantity: 1 }], client_reference_id: order.id,
       metadata: { app: 'itinpro', order_id: order.id, service_category: category.id },
       integration_identifier: integrationIdentifier(order.id),
