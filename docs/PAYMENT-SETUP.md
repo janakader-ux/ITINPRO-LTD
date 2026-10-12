@@ -1,8 +1,10 @@
 # ITIN PRO sandbox payment setup
 
-The enquiry diagnostic deployment identified `INVALID_SUPABASE_URL` during client initialisation. The request failed before any database write or email attempt. Correct the project URL before further integration tests.
+Update, 12 October 2026: the connected Supabase project is `atylicgpeeghiucrhigu` (`janakader-ux ITINPRO-LTD`). Its URL, private server key and enquiry/payment schema now work. The original database failures are resolved.
 
-Update, 12 October 2026: the correct ITIN PRO project is `atylicgpeeghiucrhigu` (`janakader-ux ITINPRO-LTD`). Its URL is now set in Render. The enquiry and payment schemas have been applied through the connected Supabase plugin, and database reconciliation/access tests passed. Supabase request logs now identify the remaining blocker as HTTP 401 `UNAUTHORIZED_INVALID_API_KEY`: replace Render's `SUPABASE_SERVICE_ROLE_KEY` with this project's server secret/service-role key. After replacing the key, three clearly marked synthetic enquiries were saved successfully (HTTP 201), with the spouse, EIN and Other fees verified. Staff email remains pending: the deployed diagnostic reports `INVALID_EMAIL_API_KEY` for `RESEND_API_KEY`. Replace that value securely in Render with a valid Resend sending key, then retest email.
+The Resend API key was replaced and the sender corrected to `ITIN PRO <enquiries@itinpro.uk>`. Two synthetic enquiries returned HTTP 201 with `notification: "sent"`: prepared 1040-NR (£395) and partnership (£450). Both records and fees were independently verified in Supabase. Render logged distinct provider email IDs, proving acceptance by Resend; inbox delivery remains unverified. The website returned HTTP 200, unknown-category validation returned HTTP 400, and all 11 active GBP sandbox prices matched the fee schedule.
+
+Payment code and the sandbox webhook are deployed, but end-to-end payment/invoice testing remains blocked by the missing private Stripe sandbox API key in Render. `PAYMENTS_ENABLED` remains `false`. The recurring integration checks remain paused until required stages pass.
 
 ## 1. Correct the database connection
 
