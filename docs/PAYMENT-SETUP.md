@@ -1,10 +1,18 @@
 # ITIN PRO sandbox payment setup
 
-Update, 12 October 2026: the connected Supabase project is `atylicgpeeghiucrhigu` (`janakader-ux ITINPRO-LTD`). Its URL, private server key and enquiry/payment schema now work. The original database failures are resolved.
+Update, 12 October 2026: the enquiry database connection and staff email sending are working. The replacement Stripe key passed the read-only catalog check. The user explicitly approved sandbox testing, and the three flows below completed without real funds or a real service booking.
 
-The Resend API key was replaced and the sender corrected to `ITIN PRO <enquiries@itinpro.uk>`. Two synthetic enquiries returned HTTP 201 with `notification: "sent"`: prepared 1040-NR (£395) and partnership (£450). Both records and fees were independently verified in Supabase. Render logged distinct provider email IDs, proving acceptance by Resend; inbox delivery remains unverified. The website returned HTTP 200, unknown-category validation returned HTTP 400, and all 11 active GBP sandbox prices matched the fee schedule.
+| Sandbox flow | Amount | Stripe and database result |
+|---|---:|---|
+| LLC owner with US bank account, synthetic LLC/EIN confirmation | £425 GBP | Checkout complete/paid; Supabase paid |
+| EIN application | £375 GBP | Checkout complete/paid; Supabase paid |
+| Custom travel (£75) and courier (£15) invoice | £90 GBP | Invoice paid with no VAT; Supabase paid |
 
-Payment code and the sandbox webhook are deployed. A private test API key is now present in Render, but two checkout tests (complex compensation £550 and FIRPTA £450) returned HTTP 503 because Stripe returned `resource_missing` when retrieving their configured prices. Both prices were independently confirmed active in sandbox `acct_1UPPNq050EnIRMqj`; the configured key therefore appears to target a different account or sandbox. The two enquiries and their canonical fees were saved, email sends were accepted, and retries retained one pending order per enquiry with no Stripe Checkout Session. Replace the key with a restricted key created inside the specified ITIN PRO LTD sandbox. Existing pending orders can be retried after correction; no new enquiry submission is needed. `PAYMENTS_ENABLED` is reset to `false`. No sandbox payment or invoice has been completed, and the recurring integration checks remain paused.
+Enquiries returned HTTP 201 and distinct Resend email IDs. Inbox delivery remains unverified. Both checkout creation retries returned the same sessions; a repeat checkout request after payment returned HTTP 409. Reapplying each actual payment event to the database reconciliation function returned `duplicate` in a rolled-back transaction. This tested database de-duplication, rather than a second HTTP delivery from Stripe. Three genuine signed Stripe webhooks independently marked the matching orders paid.
+
+New Checkout Sessions explicitly disable Adaptive Pricing to retain the quoted GBP fees. The invoice route now reuses its persisted customer and invoice IDs on later retries. Unfinished requests older than 23 hours require review, avoiding reliance on expired Stripe idempotency keys. Twelve automated tests, TypeScript checks and a production build passed.
+
+These are sandbox results, not live-payment approval. After final verification the public test-payment button is turned off (`PAYMENTS_ENABLED=false`). The recurring integration checks remain paused. Remaining work: confirm staff inbox delivery and build the secure client document portal before collecting taxpayer identifiers or documents. Live payments require separate configuration, launch checks and approval.
 
 ## 1. Correct the database connection
 
@@ -26,7 +34,7 @@ Keep `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, and `ENQUIRY_RECIPIENTS` configured 
 
 `GET /api/payments/status` verifies that the configured test key can read an existing ITIN PRO sandbox price. It never creates customers, enquiries, payments or invoices, and it works while `PAYMENTS_ENABLED=false`. HTTP 200 with `catalog: "ready"` proves access to the intended catalog; it does not prove payment completion or webhook reconciliation. Failures return a safe diagnostic code, never provider messages or credentials. Results are cached for 30 seconds.
 
-The automatic approval review rejected enabling checkout because the setup instructions said to keep payments disabled. Complete the read-only key check, then obtain explicit approval before setting `PAYMENTS_ENABLED=true` for sandbox payment and invoice tests.
+The user explicitly approved sandbox testing on 12 October 2026. Keep payments disabled between test sessions; this approval permits further sandbox tests, not live payments.
 
 ## 3. Configure sandbox payments
 

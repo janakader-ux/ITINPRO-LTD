@@ -28,10 +28,18 @@ export async function POST(request: Request) {
     if (order.error) throw order.error;
     if (order.data.kind !== 'invoice' || order.data.request_hash !== requestHash)
       return NextResponse.json({ error: 'This request ID belongs to different invoice details.' }, { status: 409 });
+    const stale = Date.now() - Date.parse(order.data.created_at) > 23 * 60 * 60 * 1000;
+    const staleResponse = () => NextResponse.json({ error: 'This unfinished invoice request is too old to retry automatically. Review its existing Stripe records before creating another invoice.' }, { status: 409 });
+    if (stale && !order.data.stripe_invoice_id) return staleResponse();
     stage = 'invoice_customer';
-    const customer = await stripe.customers.create({ name: body.name, email: body.email, metadata: { app: 'itinpro' } },
-      { idempotencyKey: `itinpro/invoice/customer/${body.requestId}` });
-    if (customer.livemode) throw new Error('LIVE_CUSTOMER_REJECTED');
+    const customer = order.data.stripe_customer_id ? await stripe.customers.retrieve(order.data.stripe_customer_id) :
+      await stripe.customers.create({ name: body.name, email: body.email, metadata: { app: 'itinpro' } },
+        { idempotencyKey: `itinpro/invoice/customer/${body.requestId}` });
+    if (customer.deleted || customer.livemode) throw new Error('SANDBOX_CUSTOMER_REQUIRED');
+    if (!order.data.stripe_customer_id) {
+      const savedCustomer = await db.from('payment_orders').update({ stripe_customer_id: customer.id }).eq('id', body.requestId);
+      if (savedCustomer.error) throw savedCustomer.error;
+    }
     stage = 'invoice_create';
     const invoice = order.data.stripe_invoice_id ? await stripe.invoices.retrieve(order.data.stripe_invoice_id) :
       await stripe.invoices.create({ customer: customer.id, collection_method: 'send_invoice', days_until_due: 7,
@@ -40,9 +48,12 @@ export async function POST(request: Request) {
         metadata: { app: 'itinpro', order_id: body.requestId },
       }, { idempotencyKey: `itinpro/invoice/${body.requestId}` });
     if (invoice.livemode || !invoice.id) throw new Error('SANDBOX_INVOICE_REQUIRED');
+    if (invoice.customer !== customer.id || invoice.metadata?.order_id !== body.requestId)
+      throw new Error('INVOICE_REFERENCE_MISMATCH');
     const saved = await db.from('payment_orders').update({ stripe_invoice_id: invoice.id, stripe_customer_id: customer.id }).eq('id', body.requestId);
     if (saved.error) throw saved.error;
     if (invoice.status === 'draft') {
+      if (stale) return staleResponse();
       stage = 'invoice_lines';
       for (const [i, line] of body.lines.entries()) {
         await stripe.invoiceItems.create({ customer: customer.id, invoice: invoice.id, currency: 'gbp', amount: line.amount,
@@ -56,6 +67,7 @@ export async function POST(request: Request) {
         { idempotencyKey: `itinpro/invoice/${body.requestId}/finalize` });
       return NextResponse.json({ invoiceId: finalized.id, url: finalized.hosted_invoice_url, sandbox: true, sent: false });
     }
+    if (invoice.total !== amount || invoice.currency !== 'gbp') throw new Error('INVOICE_AMOUNT_MISMATCH');
     return NextResponse.json({ invoiceId: invoice.id, url: invoice.hosted_invoice_url, sandbox: true, sent: false });
   } catch (error) {
     logPaymentFailure(stage, error);
