@@ -17,9 +17,12 @@ const schema = z.object({
 
 // Log diagnostic codes only, never submitted details, credentials or provider error bodies.
 function logFailure(stage: string, requestId: string, error: unknown) {
-  const detail = error as { code?: string; name?: string; statusCode?: number } | null;
+  const detail = error as { code?: string; name?: string; statusCode?: number; message?: string } | null;
+  const message = detail?.message || '';
+  const configurationCode = /Invalid supabaseUrl/i.test(message) ? 'INVALID_SUPABASE_URL' :
+    /supabaseKey.*required/i.test(message) ? 'INVALID_SUPABASE_KEY' : undefined;
   console.error('itinpro_enquiry_failure', JSON.stringify({ stage, requestId,
-    code: detail?.code?.slice(0,40), name: detail?.name?.slice(0,60), status: detail?.statusCode }));
+    code: detail?.code?.slice(0,40) || configurationCode, name: detail?.name?.slice(0,60), status: detail?.statusCode }));
 }
 
 export async function POST(request: Request) {
@@ -43,8 +46,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'The enquiry service is temporarily unavailable. Please email us.', requestId }, { status: 503 });
   }
   let enquiryId: string;
+  let databaseStage = 'database_client';
   try {
     const supabase = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+    databaseStage = 'database_write';
     const { data, error } = await supabase.from('enquiries').insert({ name: input.name,
       email: input.email, phone: input.phone || null, reason, location: input.location,
       appointment: input.appointment || null, message: input.message,
@@ -52,7 +57,7 @@ export async function POST(request: Request) {
     if (error) throw error;
     enquiryId = data.id;
   } catch (error) {
-    logFailure('database', requestId, error);
+    logFailure(databaseStage, requestId, error);
     return NextResponse.json({ error: 'Your enquiry could not be saved. Please try again or email us.', requestId }, { status: 503 });
   }
   let notification: 'sent' | 'pending' = 'pending';
