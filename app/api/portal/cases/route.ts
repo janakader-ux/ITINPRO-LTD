@@ -147,7 +147,9 @@ export async function POST(request:Request) {
       const answers=await s.admin.from('portal_answers').select('answers').eq('case_id',c.id).maybeSingle();if(answers.error)throw answers.error;
       if(!foreignAddressInput.safeParse(answers.data?.answers).success)return json({error:'Complete and save the mandatory foreign address and non-US country in Information before sending documents for review.'},400);
       const r=await s.admin.from('portal_cases').update({status:'review'}).eq('id',c.id).in('status',['collecting','missing_information']);if(r.error)throw r.error;
-      await audit(s.admin,c.id,s.user.id,'review_requested');return json({ok:true});
+      await audit(s.admin,c.id,s.user.id,'review_requested');
+      const notification=await queuePortalNotice(c.id,`review-${c.id}-${c.status}`,'staff').catch(()=>({pending:1,delivery:'unverified'}));
+      return json({ok:true,notification});
     }
     if(body.action==='approve'){
       if(s.user.id!==c.owner_id)throw new Error('INVALID_INPUT');

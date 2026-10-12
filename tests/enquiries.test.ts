@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { POST } from '../app/api/enquiries/route';
 
 test('enquiry route validates inputs, distinguishes malformed config and does not reject a saved enquiry on email failure', async () => {
-  const keys=['SUPABASE_URL','SUPABASE_SERVICE_ROLE_KEY','RESEND_API_KEY','PAYMENTS_ENABLED'];
+  const keys=['SUPABASE_URL','SUPABASE_SERVICE_ROLE_KEY','RESEND_API_KEY','PAYMENTS_ENABLED','STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET','PAYMENT_TOKEN_SECRET'];
   const before=Object.fromEntries(keys.map(k=>[k,process.env[k]]));
   const originalFetch=globalThis.fetch; const originalError=console.error;const originalInfo=console.info;
   const logs:string[]=[]; console.error=(...args)=>logs.push(args.join(' ')); console.info=()=>{};
@@ -33,6 +33,10 @@ test('enquiry route validates inputs, distinguishes malformed config and does no
     const result=await accepted.json();assert.equal(result.notification,'pending');assert.ok(result.enquiryId);
     assert.ok(logs.some(x=>x.includes('INVALID_EMAIL_API_KEY')));
     assert.ok(savedReason.includes('£395'));assert.ok(!savedReason.includes('£1'));
+    process.env.PAYMENTS_ENABLED='true';process.env.STRIPE_SECRET_KEY='sk_test_SYNTHETIC';process.env.STRIPE_WEBHOOK_SECRET='whsec_SYNTHETIC';process.env.PAYMENT_TOKEN_SECRET='SYNTHETIC_SECRET';
+    const simple=await POST(request({flowVersion:'simple-v1',firstName:'Test',lastName:'Applicant',email:'test@example.com',phone:'+44 123456789',service:'itin',applicationRoute:'llc-bank-account',preference:'online',readiness:'yes',consent:'yes'}));
+    assert.equal(simple.status,201);assert.equal((await simple.json()).checkoutToken,undefined,'short intake must not offer payment before engagement');assert.match(savedReason,/£425/);
+    const rejected=await POST(request({flowVersion:'unknown',...payload}));assert.equal(rejected.status,400,'new intake must not fall through to legacy checkout');
     assert.ok(!logs.join(' ').includes(payload.email));assert.ok(!logs.join(' ').includes('TEST_ONLY_SERVICE_KEY'));
   } finally {
     globalThis.fetch=originalFetch;console.error=originalError;console.info=originalInfo;
