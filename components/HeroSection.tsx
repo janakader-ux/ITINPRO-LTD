@@ -13,7 +13,7 @@ export function HeroSection() {
         <p className="eyebrow">UK-based IRS Certifying Acceptance Agent support</p>
         <h1 className="mt-5 font-display text-5xl leading-[1.02] tracking-tight text-white sm:text-6xl lg:text-7xl">Keep your passport close.<br/><span className="gold-text">Move your ITIN forward.</span></h1>
         <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-200">Form W-7, 1040-NR and cross-border US tax support for UK and European applicants—with compliant document checks and clear next steps.</p>
-        <div className="mt-8 flex flex-wrap gap-3"><Link href="#enquiry" className="gold-button">Start the Smart ITIN Form</Link><Link href="/guides" className="outline-button">Explore ITIN Guides / FAQs</Link></div>
+        <div className="mt-8 flex flex-wrap gap-3"><Link href="#enquiry" className="gold-button">Choose your service</Link><Link href="/guides" className="outline-button">Explore ITIN Guides / FAQs</Link></div>
         <div className="mt-10 grid gap-3 text-sm sm:grid-cols-2">
           {[['IRS CAA support',BadgeCheck],['UK GDPR-conscious process',ShieldCheck],['No passport upload on enquiry',LockKeyhole],['Bedford & UK travel options',MapPin]].map(([label,Icon]) => <div key={String(label)} className="glass flex min-h-14 items-center gap-3 rounded-xl px-4"><Icon className="size-5 text-emerald"/><span>{String(label)}</span></div>)}
         </div>

@@ -1,3 +1,4 @@
+import { simpleIntakeSchema, normalizeSimpleIntake } from '@/lib/service-intake';
 import { randomUUID } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
@@ -37,14 +38,16 @@ export async function POST(request: Request) {
   let body: unknown;
   try { body = await request.json(); }
   catch { return NextResponse.json({ error: 'Please submit a valid form.', requestId }, { status: 400 }); }
-  const parsed = schema.safeParse(body);
+  const isSimple = Boolean(body && typeof body === 'object' && 'flowVersion' in body);
+  const simple = isSimple ? simpleIntakeSchema.safeParse(body) : undefined;
+  const parsed = simple ? (simple.success ? { success: true as const, data: normalizeSimpleIntake(simple.data) } : simple) : schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: 'Please check the form details.',
     fields: [...new Set(parsed.error.issues.map(issue => String(issue.path[0])))], requestId }, { status: 400 });
   const input = parsed.data;
   const category = getItinCategory(input.serviceCategory)!;
-  if (category.id === 'llc-bank-account' && input.llcAndEinConfirmed !== 'yes')
+  if (!isSimple && category.id === 'llc-bank-account' && input.llcAndEinConfirmed !== 'yes')
     return NextResponse.json({ error: 'An LLC and EIN are required for this category', requestId }, { status: 400 });
-  const reason = `${category.label} — ${formatItinFee(category.amount)}`;
+  const reason = `${isSimple ? input.reason : category.label} — ${formatItinFee(category.amount)}`;
   const url = process.env.SUPABASE_URL?.trim();
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   const resendKey = process.env.RESEND_API_KEY?.trim();
@@ -84,7 +87,7 @@ export async function POST(request: Request) {
   } catch (error) { logFailure('email', requestId, error); }
   // Accept saved enquiries even if staff email fails; do not invite duplicate submissions.
   console.info('itinpro_enquiry_saved', JSON.stringify({ requestId, enquiryId, notification }));
-  const checkoutToken = category.amount !== null && paymentConfigurationReady()
+  const checkoutToken = !isSimple && category.amount !== null && paymentConfigurationReady()
     ? createCheckoutToken(enquiryId, category.id, process.env.PAYMENT_TOKEN_SECRET!) : undefined;
   return NextResponse.json({ ok: true, enquiryId, notification, requestId, checkoutToken }, { status: 201 });
 }
