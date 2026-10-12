@@ -12,6 +12,8 @@ create table if not exists public.enquiries (
 );
 
 alter table public.enquiries enable row level security;
+revoke all on public.enquiries from anon, authenticated;
+grant all on public.enquiries to service_role;
 
 -- No public insert/select policy. The server route writes with the service-role key.
 -- Configure a retention schedule and delete enquiries when no longer required.

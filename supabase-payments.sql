@@ -21,6 +21,7 @@ create table if not exists public.payment_events (
   order_id uuid not null references public.payment_orders(id),
   received_at timestamptz not null default now()
 );
+create index if not exists payment_events_order_id_idx on public.payment_events(order_id);
 alter table public.payment_orders enable row level security;
 alter table public.payment_events enable row level security;
 revoke all on public.payment_orders, public.payment_events from anon, authenticated;

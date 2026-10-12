@@ -2,6 +2,8 @@
 
 The enquiry diagnostic deployment identified `INVALID_SUPABASE_URL` during client initialisation. The request failed before any database write or email attempt. Correct the project URL before further integration tests.
 
+Update, 12 October 2026: the correct ITIN PRO project is `atylicgpeeghiucrhigu` (`janakader-ux ITINPRO-LTD`). Its URL is now set in Render. The enquiry and payment schemas have been applied through the connected Supabase plugin, and database reconciliation/access tests passed. Supabase request logs now identify the remaining blocker as HTTP 401 `UNAUTHORIZED_INVALID_API_KEY`: replace Render's `SUPABASE_SERVICE_ROLE_KEY` with this project's server secret/service-role key. There are no saved enquiry records yet.
+
 ## 1. Correct the database connection
 
 Open the ITIN PRO project in the Supabase Dashboard and copy its Project URL from the Connect dialog / Data API settings. Use the base HTTPS URL, normally `https://<project-reference>.supabase.co`. Do not use the Supabase dashboard address, a PostgreSQL connection string, a key, or the placeholder text.
@@ -11,6 +13,8 @@ Render service: https://dashboard.render.com/web/srv-db5slrnavr4c739ugdag
 Set `SUPABASE_URL` to that exact URL. `SUPABASE_SERVICE_ROLE_KEY` must contain this same project's server-side service-role or secret key, never its anon/publishable key. Store credentials in Render environment settings, not GitHub or chat.
 
 Run the existing `supabase.sql` if the `enquiries` table has not been created. Then run `supabase-payments.sql` in the same project's SQL Editor. The payment migration is additive, with no public access policies, and is tested against PostgreSQL.
+
+These tables are already created on the connected ITIN PRO project. No manual SQL setup is required there. The existing `public.rls_auto_enable()` event-trigger helper was also restricted so anonymous/signed-in API clients cannot execute it. The automatic RLS trigger remains enabled. Supabase security advisors now report no warnings, only the intentional absence of public row policies on these server-only tables.
 
 ## 2. Confirm enquiry email
 
