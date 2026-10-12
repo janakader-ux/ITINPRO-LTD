@@ -20,7 +20,7 @@ test('enquiry route validates inputs, distinguishes malformed config and does no
         savedReason=JSON.parse(String(options?.body)).reason;
         return new Response(JSON.stringify({id:'11111111-1111-4111-8111-111111111111'}),{status:201,headers:{'Content-Type':'application/json'}});
       }
-      if(url.startsWith('https://api.resend.com/'))return new Response(JSON.stringify({name:'validation_error',message:'Test provider rejection'}),{status:422,headers:{'Content-Type':'application/json'}});
+      if(url.startsWith('https://api.resend.com/'))return new Response(JSON.stringify({name:'validation_error',message:'API key is invalid'}),{status:400,headers:{'Content-Type':'application/json'}});
       throw new Error('Unexpected network call in test');
     };
     const invalid=await POST(request({...payload,serviceCategory:'unknown'}));assert.equal(invalid.status,400);assert.equal(fetches,0);
@@ -31,6 +31,7 @@ test('enquiry route validates inputs, distinguishes malformed config and does no
     process.env.SUPABASE_URL='https://test-only.supabase.co';
     const accepted=await POST(request(payload));assert.equal(accepted.status,201);
     const result=await accepted.json();assert.equal(result.notification,'pending');assert.ok(result.enquiryId);
+    assert.ok(logs.some(x=>x.includes('INVALID_EMAIL_API_KEY')));
     assert.ok(savedReason.includes('£395'));assert.ok(!savedReason.includes('£1'));
     assert.ok(!logs.join(' ').includes(payload.email));assert.ok(!logs.join(' ').includes('TEST_ONLY_SERVICE_KEY'));
   } finally {

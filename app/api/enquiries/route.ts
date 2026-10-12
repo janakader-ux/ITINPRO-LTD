@@ -22,7 +22,12 @@ function logFailure(stage: string, requestId: string, error: unknown) {
   const detail = error as { code?: string; name?: string; statusCode?: number; message?: string } | null;
   const message = detail?.message || '';
   const configurationCode = /Invalid supabaseUrl/i.test(message) ? 'INVALID_SUPABASE_URL' :
-    /supabaseKey.*required/i.test(message) ? 'INVALID_SUPABASE_KEY' : undefined;
+    /supabaseKey.*required/i.test(message) ? 'INVALID_SUPABASE_KEY' :
+    /API key is invalid|invalid.*API key|invalid_api_key/i.test(message) ? 'INVALID_EMAIL_API_KEY' :
+    /domain.*not verified|not verified.*domain/i.test(message) ? 'SENDER_DOMAIN_NOT_VERIFIED' :
+    /invalid.*from|from.*invalid/i.test(message) ? 'INVALID_EMAIL_FROM' :
+    /invalid.*to.*field|to.*field.*invalid/i.test(message) ? 'INVALID_EMAIL_RECIPIENTS' :
+    /only send.*own email|testing emails/i.test(message) ? 'EMAIL_TESTING_RESTRICTION' : undefined;
   console.error('itinpro_enquiry_failure', JSON.stringify({ stage, requestId,
     code: detail?.code?.slice(0,40) || configurationCode, name: detail?.name?.slice(0,60), status: detail?.statusCode }));
 }
