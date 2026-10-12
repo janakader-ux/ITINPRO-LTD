@@ -1,3 +1,4 @@
+import { compatibleApplicationRoutes,sandboxRecipient } from '../lib/portal/case-options';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { applicationRoutes,routeChecklist,routeFee,signatureInstructions,passportInstructions } from '../lib/portal/checklists';
@@ -44,4 +45,17 @@ test('distinct IRS exception pathways keep required evidence and do not confuse 
   assert.match(text('dependent'),/12 months/);
   assert.equal(routeChecklist('partnership').find(x=>x.id==='partnership-letter')!.basis,'ITIN PRO');
   for(const id of ['student-return','wages-treaty','scholarship-treaty','scholarship-no-treaty']) assert.equal(routeFee(id),55000);
+});
+
+test('ITIN case choices exclude EIN and price/category mismatches; test recipient cannot override a real order',()=>{
+  assert.deepEqual(compatibleApplicationRoutes({category:'ein',amount:37500}),[]);
+  assert.deepEqual(compatibleApplicationRoutes({category:'llc-bank-account',amount:42500}).map(x=>x.id),['llc-bank-account','business-bank-interest']);
+  assert.deepEqual(compatibleApplicationRoutes({category:'spouse',amount:37500}),[]);
+  assert.deepEqual(compatibleApplicationRoutes({category:'spouse',amount:39500}).map(x=>x.id),['spouse']);
+  const synthetic={email:'payment@example.com',message:'AUTOMATED TEST ONLY. Dummy payment.'};
+  assert.equal(sandboxRecipient(synthetic,'Tester@Example.test'),'tester@example.test');
+  assert.equal(sandboxRecipient(synthetic),synthetic.email);
+  assert.throws(()=>sandboxRecipient({...synthetic,email:'realpayer@example.test'},'tester@example.test'));
+  assert.throws(()=>sandboxRecipient({...synthetic,message:'A real client enquiry'},'tester@example.test'));
+  assert.throws(()=>sandboxRecipient(synthetic,'invalid-email'));
 });
