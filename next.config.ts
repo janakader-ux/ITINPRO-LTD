@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   images: { formats: ['image/avif', 'image/webp'] },
   async redirects() {
     return [
+      { source: '/index.html', destination: '/', permanent: true },
       { source: '/itin-guides.html', destination: '/guides', permanent: true },
       { source: '/smart-itin-form.html', destination: '/#enquiry', permanent: true },
       { source: '/itin-document-rules.html', destination: '/guides/itin-acceptable-documents-passport', permanent: true },
