@@ -108,11 +108,11 @@ The U.S. visit questions follow the selected tax year and its two preceding year
 
 Location, referral source, approximate U.S. visits and additional notes are optional. Use Not sure where available instead of guessing. Citizenship dropdown records one country initially; other citizenships can be noted. Do not enter SSNs, ITINs, EINs, passport numbers or bank information in the public notes. Original signatures and CAA document verification remain separate from this intake.
 
-## Reference structure reviewed 12 October 2026
+## Official guidance
 
-The new-ITIN example uses adviser follow-up with basic reason, U.S. visit, history and location questions. Its embedded application fields were inspected in the browser. The renewal page was reviewed; its embedded renewal field list was not exposed, so the ITIN PRO renewal questions are our own adapted intake. Branding, promises and wording are specific to ITIN PRO LTD.
+The enquiry questions support ITIN PRO's own eligibility and service review. IRS instructions govern application eligibility and supporting evidence.
 
-- https://www.justbreve.com/i-need-an-itin
-- https://www.justbreve.com/itin-renewal
+- https://www.irs.gov/instructions/iw7
+- https://www.irs.gov/individuals/itin-acceptance-agent-program
 - https://www.irs.gov/instructions/iss4
 - https://www.irs.gov/instructions/i1040nr
