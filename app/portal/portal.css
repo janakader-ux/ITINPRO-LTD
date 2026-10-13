@@ -63,3 +63,6 @@
 .portal-fee small { display:block;font-size:1rem;font-weight:400; }
 @media(max-width:480px){.portal-start-guide{grid-template-columns:1fr}.portal-stepper li{font-size:.72rem}.portal-actions button{flex:1;min-height:48px}.portal-client-journey{padding:1rem}}
 @media print{.portal-client-journey details,.portal-client-journey details>*{display:block!important}}
+
+.engagement-brand{margin:0 0 1.5rem}.engagement-brand img{display:block;width:min(100%,400px);height:auto;border-radius:12px}
+@media print{.engagement-brand{break-inside:avoid;margin-bottom:16pt}.engagement-brand img{width:110mm;height:auto;print-color-adjust:exact;-webkit-print-color-adjust:exact}}
