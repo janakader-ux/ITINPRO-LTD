@@ -1,14 +1,17 @@
 import { randomUUID,createHash } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { paymentDatabase,stripeClient,verifySandboxCatalog } from '@/lib/payments';
+import { paymentDatabase,stripeClient,verifySandboxCatalog,paymentConfigurationReady } from '@/lib/payments';
 import { portalEnabled,portalSession,portalBucket,uploadsEnabled,ensurePortalBucket,sendPortalLink,safePortalError } from '@/lib/portal/server';
 import { getApplicationRoute,routeChecklist,routeFee,checklistVersion } from '@/lib/portal/checklists';
-import { sameOrigin,caseInput,answersInput,foreignAddressInput,validateFile } from '@/lib/portal/validation';
+import { sameOrigin,caseInput,answersInput,draftAnswersInput,foreignAddressInput,validateFile } from '@/lib/portal/validation';
 import { engagementSnapshot } from '@/lib/portal/engagement';
 import { queuePortalNotice,repairAndRetryNotices } from '@/lib/portal/notifications';
 import { compatibleApplicationRoutes,sandboxRecipient } from '@/lib/portal/case-options';
 import { normalizeQuestionnaireAnswers } from '@/lib/portal/questionnaire';
+import { createReviewedCase } from '@/lib/portal/create-reviewed-case';
+import { issueCaseInvoice } from '@/lib/portal/invoice';
+import { casePaymentMatches } from '@/lib/portal/workflow';
 export const runtime='nodejs';
 const json=(body:unknown,status=200)=>NextResponse.json(body,{status,headers:{'Cache-Control':'no-store'}});
 async function context(caseId?:string) {
@@ -24,19 +27,29 @@ async function context(caseId?:string) {
 async function audit(admin:ReturnType<typeof paymentDatabase>,caseId:string,actor:string,action:string,detail:Record<string,unknown>={}) {
   const r=await admin.from('portal_audit').insert({case_id:caseId,actor_id:actor,action,detail});if(r.error)throw r.error;
 }
-async function canUpload(admin:ReturnType<typeof paymentDatabase>,c:NonNullable<Awaited<ReturnType<typeof context>>['c']>) {
-  if(!uploadsEnabled())throw new Error('UPLOADS_DISABLED');
+async function canCollect(admin:ReturnType<typeof paymentDatabase>,c:NonNullable<Awaited<ReturnType<typeof context>>['c']>) {
   if(!c.test_only || c.status==='cancelled')throw new Error('SANDBOX_ONLY');
-  const {data:p,error:pe}=await admin.from('payment_orders').select('status,amount,currency').eq('id',c.payment_order_id).single();
-  if(pe || p.status!=='paid' || p.amount!==c.fee || p.currency!=='gbp')throw new Error('PAYMENT_REQUIRED');
+  const {data:p,error:pe}=await admin.from('payment_orders').select('id,status,amount,currency,kind,service_category').eq('id',c.payment_order_id).single();
+  if(pe || !casePaymentMatches(c,p))throw new Error('PAYMENT_REQUIRED');
   const {data:a,error:ae}=await admin.from('portal_agreements').select('accepted_at,work_may_start_at').eq('case_id',c.id).single();
   if(ae || !a.accepted_at)throw new Error('AGREEMENT_REQUIRED');
   return a;
+}
+async function canUpload(admin:ReturnType<typeof paymentDatabase>,c:NonNullable<Awaited<ReturnType<typeof context>>['c']>){
+  if(!uploadsEnabled())throw new Error('UPLOADS_DISABLED');return canCollect(admin,c);
 }
 export async function GET(request:Request) {
   try{
     const query=new URL(request.url).searchParams;
     const s=await context(query.get('caseId') || undefined);
+    if(query.get('enquiries')==='yes'){
+      if(!s.staff)throw new Error('STAFF_MFA_REQUIRED');
+      const {data,error}=await s.admin.from('enquiries').select('id,name,email,reason,message,intake,created_at').contains('intake',{testOnly:true,service:'itin'}).order('created_at',{ascending:false}).limit(30);
+      if(error)throw error;
+      const issued=data?.length?await s.admin.from('payment_orders').select('enquiry_id,portal_cases!inner(id)').in('enquiry_id',data.map(e=>e.id)):{data:[],error:null};if(issued.error)throw issued.error;
+      const issuedIds=new Set(issued.data?.map(o=>o.enquiry_id));
+      return json({enquiries:data?.filter(e=>!issuedIds.has(e.id)),testClientEmail:process.env.PORTAL_TEST_CLIENT_EMAIL?.trim().toLowerCase()||null});
+    }
     if(query.get('orders')==='yes'){
       if(!s.staff)throw new Error('STAFF_MFA_REQUIRED');
       const {data,error}=await s.admin.from('payment_orders').select('id,service_category,amount,enquiries!inner(name,email,message)').eq('kind','checkout').eq('status','paid').order('created_at',{ascending:false}).limit(30);
@@ -48,8 +61,11 @@ export async function GET(request:Request) {
     const results=await Promise.all(names.map(name=>s.db.from(name).select('*').eq('case_id',s.c!.id)));
     for(const result of results)if(result.error)throw result.error;
     const value=Object.fromEntries(names.map((name,i)=>[name,results[i].data]));
-    const owner=await s.db.from('portal_accounts').select('email').eq('user_id',s.c.owner_id).single();if(owner.error)throw owner.error;
-    return json({clientEmail:owner.data.email,case:s.c,role:s.account.role,staffMfa:s.staff,uploadsEnabled:uploadsEnabled(),...value});
+    // Case access was already checked with session RLS. Staff cannot read another
+    // account through the self-only account policy, so resolve its email server-side.
+    const owner=await s.admin.from('portal_accounts').select('email').eq('user_id',s.c.owner_id).single();if(owner.error)throw owner.error;
+    const payment=await s.admin.from('payment_orders').select('id,status,amount,currency,service_category,kind,paid_at').eq('id',s.c.payment_order_id).single();if(payment.error)throw payment.error;
+    return json({clientEmail:owner.data.email,case:s.c,role:s.account.role,staffMfa:s.staff,uploadsEnabled:uploadsEnabled(),payment:payment.data,paymentsEnabled:paymentConfigurationReady(),...value});
   }catch(error){const code=safePortalError(error);return json({error:code},code==='SIGN_IN_REQUIRED'?401:code==='CASE_NOT_FOUND'?404:code==='STAFF_MFA_REQUIRED'?403:503);}
 }
 export async function POST(request:Request) {
@@ -87,6 +103,10 @@ export async function POST(request:Request) {
       return json({ok:true,documentId:id},201);
     }
     const body=await request.json();
+    if(body.action==='review-enquiry'){
+      const s=await context();if(!s.staff)throw new Error('STAFF_MFA_REQUIRED');
+      return json({ok:true,...await createReviewedCase(s.admin,s.user.id,body.input)},201);
+    }
     if(body.action==='create'){
       const s=await context();if(!s.staff)throw new Error('STAFF_MFA_REQUIRED');
       const input=caseInput.parse(body.input);const route=getApplicationRoute(input.routeId)!;
@@ -128,19 +148,33 @@ export async function POST(request:Request) {
       const {data:a,error}=await s.admin.from('portal_accounts').select('email').eq('user_id',c.owner_id).single();if(error)throw error;
       await sendPortalLink(a.email);await audit(s.admin,c.id,s.user.id,'access_link_requested');return json({ok:true,message:'Access link requested; inbox delivery must be checked separately.'});
     }
-    if(body.action==='answers'){
+    if(body.action==='answers'||body.action==='save-draft'){
       if(s.user.id!==c.owner_id || !['collecting','review','missing_information'].includes(c.status))throw new Error('INVALID_INPUT');
+      await canCollect(s.admin,c);
       if(!body.answers || typeof body.answers!=='object' || Array.isArray(body.answers))return json({error:'Please check the questionnaire answers.'},400);
-      const parsed=answersInput.safeParse(normalizeQuestionnaireAnswers(body.answers,s.user.email!));
+      const parsed=(body.action==='save-draft'?draftAnswersInput:answersInput).safeParse(normalizeQuestionnaireAnswers(body.answers,s.user.email!));
       if(!parsed.success){const foreign=parsed.error.issues.some(x=>['foreignAddress','foreignCountry'].includes(String(x.path[0])));return json({error:foreign?'Foreign address is mandatory. Enter a complete foreign address and select its non-US country. If you need help, contact the CAA before sending for review.':'Please check the questionnaire fields.',fields:[...new Set(parsed.error.issues.map(x=>String(x.path[0])))]},400);}
       const input=parsed.data;
-      const r=await s.admin.from('portal_answers').upsert({case_id:c.id,answers:input,updated_at:new Date().toISOString()});if(r.error)throw r.error;
-      await audit(s.admin,c.id,s.user.id,'questionnaire_saved');return json({ok:true});
+      const revision=z.number().int().nonnegative().parse(body.revision??0);
+      const r=await s.admin.rpc('portal_save_answers',{p_case:c.id,p_actor:s.user.id,p_answers:input,p_revision:revision});
+      if(r.error)throw new Error(/ANSWERS_VERSION_MISMATCH/.test(r.error.message)?'ANSWERS_VERSION_MISMATCH':'INVALID_INPUT');
+      return json({ok:true,revision:r.data});
     }
     if(body.action==='accept'){
       if(s.user.id!==c.owner_id)throw new Error('INVALID_INPUT');
       const input=z.object({hash:z.string().regex(/^[a-f0-9]{64}$/),signature:z.string().trim().min(2).max(100),terms:z.literal(true),documents:z.literal(true),identity:z.literal(true),privacy:z.literal(true),startEarly:z.boolean()}).parse(body.acceptance);
-      const r=await s.admin.rpc('portal_accept_agreement',{p_case:c.id,p_actor:s.user.id,p_hash:input.hash,p_signature:input.signature,p_early:input.startEarly});if(r.error)throw new Error(/VERSION_MISMATCH/.test(r.error.message)?'AGREEMENT_VERSION_MISMATCH':'INVALID_INPUT');return json({ok:true,result:r.data});
+      const r=await s.admin.rpc('portal_accept_agreement',{p_case:c.id,p_actor:s.user.id,p_hash:input.hash,p_signature:input.signature,p_early:input.startEarly});if(r.error)throw new Error(/VERSION_MISMATCH/.test(r.error.message)?'AGREEMENT_VERSION_MISMATCH':'INVALID_INPUT');
+      await queuePortalNotice(c.id,`signed-${c.id}`,'staff').catch(()=>{});
+      let invoicePending=false;
+      if(paymentConfigurationReady()&&c.workflow==='engagement-first'){try{await issueCaseInvoice(s.admin,stripeClient(),c.id);}catch{invoicePending=true;}}
+      return json({ok:true,result:r.data,invoicePending});
+    }
+    if(body.action==='send-invoice'){
+      if(!s.staff)throw new Error('STAFF_MFA_REQUIRED');
+      if(!paymentConfigurationReady())throw new Error('SANDBOX_ONLY');
+      const resendId=z.uuid().parse(body.resendId);
+      const invoice=await issueCaseInvoice(s.admin,stripeClient(),c.id,resendId);
+      return json({ok:true,invoiceId:invoice.invoiceId,notification:invoice.notification});
     }
     if(body.action==='submit'){
       if(s.user.id!==c.owner_id)throw new Error('INVALID_INPUT');await canUpload(s.admin,c);
@@ -172,6 +206,7 @@ export async function POST(request:Request) {
     }
     // Draft release and submission gates need atomic transactions. Added RPC below.
     if(body.action==='release'){
+      await canCollect(s.admin,c);
       const documentId=z.uuid().parse(body.documentId);const r=await s.admin.rpc('portal_release_draft',{p_case:c.id,p_actor:s.user.id,p_document:documentId});if(r.error)throw new Error('INVALID_INPUT');const notification=await queuePortalNotice(c.id,`draft-${documentId}`,'client').catch(()=>({pending:1,delivery:'unverified'}));return json({ok:true,notification});
     }
     if(body.action==='share-record'){

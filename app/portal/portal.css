@@ -36,3 +36,5 @@
 .portal-panel ul { padding-left:1.4rem;list-style:disc; }
 @media(max-width:640px){.portal-fields,.portal-checklist{grid-template-columns:1fr}.portal-document{display:block}.portal-document span{display:block}.portal-panel td{padding:.4rem;font-size:.9rem}}
 @media print{body,.page-shell,.portal-panel{background:white!important;color:black!important}.portal-no-print,header,footer,.portal-test{display:none!important}.portal-panel{border:0;padding:0}.portal-agreement p,.portal-agreement h3,.portal-agreement td{color:black!important}.portal-agreement td{border-color:#aaa}.portal-agreement{font-size:11pt}.portal-agreement code{font-size:8pt}.client-portal{padding:0}}
+
+.portal-next-action { margin:1rem 0;padding:1.2rem;border:1px solid #b29956;border-radius:.7rem;background:#1c2541; }

@@ -28,7 +28,7 @@ export async function portalSession() {
 }
 export function safePortalError(error: unknown) {
   const code=(error as {message?:string})?.message || '';
-  return ['SIGN_IN_REQUIRED','STAFF_MFA_REQUIRED','CASE_NOT_FOUND','PAYMENT_REQUIRED','AGREEMENT_REQUIRED','UNKNOWN_APPLICATION_ROUTE','UPLOADS_DISABLED','FILE_SIZE','FILE_TYPE','INVALID_INPUT','AGREEMENT_VERSION_MISMATCH','DRAFT_VERSION_MISMATCH','SANDBOX_ONLY'].includes(code) ? code : 'PORTAL_TEMPORARILY_UNAVAILABLE';
+  return ['SIGN_IN_REQUIRED','STAFF_MFA_REQUIRED','CASE_NOT_FOUND','CASE_ACCESS_DENIED','PAYMENT_REQUIRED','AGREEMENT_REQUIRED','UNKNOWN_APPLICATION_ROUTE','UPLOADS_DISABLED','FILE_SIZE','FILE_TYPE','INVALID_INPUT','AGREEMENT_VERSION_MISMATCH','ANSWERS_VERSION_MISMATCH','DRAFT_VERSION_MISMATCH','SANDBOX_ONLY','ENQUIRY_ALREADY_REVIEWED','TEST_CLIENT_NOT_READY'].includes(code) ? code : 'PORTAL_TEMPORARILY_UNAVAILABLE';
 }
 export async function sendPortalLink(email: string, bootstrapStaff=false) {
   const admin=paymentDatabase();
@@ -64,6 +64,7 @@ export async function sendPortalLink(email: string, bootstrapStaff=false) {
   if (sent.error || !sent.data?.id) throw sent.error || new Error('EMAIL_NOT_ACCEPTED');
   // Provider acceptance is not evidence of inbox delivery. Never log the link/token/email.
   console.info('itinpro_portal_email_accepted',JSON.stringify({emailId:sent.data.id}));
+  return {emailId:sent.data.id};
 }
 export async function ensurePortalBucket() {
   const admin=paymentDatabase();

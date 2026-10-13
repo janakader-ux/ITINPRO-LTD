@@ -3,3 +3,8 @@ Thumbs.db
 *.log
 .idea/
 .vscode/
+node_modules/
+.next/
+.env*
+!.env.example
+supabase/.temp/

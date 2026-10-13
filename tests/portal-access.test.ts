@@ -39,11 +39,12 @@ test('Render proxy accepts only the configured public portal origin and email li
   const before=Object.fromEntries(keys.map(k=>[k,process.env[k]]));
   try{
     Object.assign(process.env,{NODE_ENV:'production',RENDER_EXTERNAL_URL:'https://itinpro-uk.onrender.com',APP_URL:'https://itinpro.uk'});
-    assert(sameOrigin(new Request('http://localhost:10000/api/portal/auth',{headers:{origin:'https://itinpro-uk.onrender.com'}})));
+    assert(!sameOrigin(new Request('http://localhost:10000/api/portal/auth',{headers:{origin:'https://itinpro-uk.onrender.com'}})));
     assert(!sameOrigin(new Request('http://localhost:10000/api/portal/auth',{headers:{origin:'https://attacker.example','x-forwarded-host':'attacker.example','x-forwarded-proto':'https'}})));
-    assert(!sameOrigin(new Request('http://localhost:10000/api/portal/auth',{headers:{origin:'https://itinpro.uk'}})));
+    assert(sameOrigin(new Request('http://localhost:10000/api/portal/auth',{headers:{origin:'https://itinpro.uk'}})));
     assert(!sameOrigin(new Request('http://localhost:10000/api/portal/auth')));
-    assert.equal(portalOrigin(),'https://itinpro-uk.onrender.com');
+    assert.equal(portalOrigin(),'https://itinpro.uk');
+    delete process.env.APP_URL;assert.equal(portalOrigin(),'https://itinpro-uk.onrender.com');
   }finally{for(const k of keys){if(before[k]===undefined)delete process.env[k];else process.env[k]=before[k];}}
 });
 

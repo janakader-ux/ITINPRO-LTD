@@ -33,7 +33,7 @@ export function serviceFeeScope(id: string) {
 }
 
 export const additionalChargesNotice = 'For additional travel or courier charges, please email Taz@itinpro.uk or Shan@itinpro.uk. We will confirm the charges and send a separate, customised invoice with an itemised breakdown.';
-export const otherCategoryNotice = 'If your ITIN category is not listed, select Other and pay the £425 Other category fee. Describe your circumstances in the application notes or email us. We will review your category and confirm any fee difference, which can be paid later by separate invoice.';
+export const otherCategoryNotice = 'If you are not sure which ITIN category applies, ask our team to help. We will review eligibility, confirm the service and total fee, and issue your engagement before requesting payment.';
 
 export function categoryForGuide(slug: string): ItinCategoryId | undefined {
   const categories: Record<string, ItinCategoryId> = {
