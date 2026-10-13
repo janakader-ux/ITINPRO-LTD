@@ -11,6 +11,7 @@ import { compatibleApplicationRoutes,sandboxRecipient } from '@/lib/portal/case-
 import { normalizeQuestionnaireAnswers } from '@/lib/portal/questionnaire';
 import { createReviewedCase } from '@/lib/portal/create-reviewed-case';
 import { issueCaseInvoice } from '@/lib/portal/invoice';
+import { missingRequiredUploads } from '@/lib/portal/client-journey';
 import { casePaymentMatches } from '@/lib/portal/workflow';
 export const runtime='nodejs';
 const json=(body:unknown,status=200)=>NextResponse.json(body,{status,headers:{'Cache-Control':'no-store'}});
@@ -180,6 +181,8 @@ export async function POST(request:Request) {
       if(s.user.id!==c.owner_id)throw new Error('INVALID_INPUT');await canUpload(s.admin,c);
       const answers=await s.admin.from('portal_answers').select('answers').eq('case_id',c.id).maybeSingle();if(answers.error)throw answers.error;
       if(!foreignAddressInput.safeParse(answers.data?.answers).success)return json({error:'Complete and save the mandatory foreign address and non-US country in Information before sending documents for review.'},400);
+      const files=await s.admin.from('portal_documents').select('item_id,kind,state').eq('case_id',c.id);if(files.error)throw files.error;
+      const missing=missingRequiredUploads(routeChecklist(c.route_id),files.data||[]);if(missing.length)return json({error:'Upload the remaining required documents before sending for review.',missing},400);
       const r=await s.admin.from('portal_cases').update({status:'review'}).eq('id',c.id).in('status',['collecting','missing_information']);if(r.error)throw r.error;
       await audit(s.admin,c.id,s.user.id,'review_requested');
       const notification=await queuePortalNotice(c.id,`review-${c.id}-${c.status}`,'staff').catch(()=>({pending:1,delivery:'unverified'}));

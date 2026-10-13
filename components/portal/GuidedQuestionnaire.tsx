@@ -2,6 +2,7 @@
 import { useEffect,useRef,useState } from 'react';
 import type { QuestionnaireField } from '@/lib/portal/questionnaire';
 import { QuestionnaireFields } from './QuestionnaireFields';
+import { foreignCountryOptions } from '@/lib/portal/questionnaire';
 import { portalPost } from './PortalApp';
 const sections=[
   {title:'About you',fields:['firstName','middleName','lastName','birthName','dateOfBirth','sex','birthCountry','birthCity','citizenship']},
@@ -10,8 +11,10 @@ const sections=[
   {title:'Your tax situation',fields:['spouseName','spouseTaxId','relationship','treatyCountry','treatyArticle','companyName','companyEin','filingStatus','taxPurpose','institutionName','institutionCityState','durationOfStay','payerName','paymentYear','taxBenefit','propertyAddress','closingDate']},
   {title:'Anything else',fields:['notes']},
 ];
-export function GuidedQuestionnaire({caseId,fields,initialAnswers,initialRevision,clientEmail,readOnly,onDocuments,onRegisterSave}:{caseId:string;fields:QuestionnaireField[];initialAnswers:Record<string,string>;initialRevision:number;clientEmail:string;readOnly:boolean;onDocuments:()=>void;onRegisterSave?:(save:(()=>Promise<void>)|null)=>void}){
-  const [answers,setAnswers]=useState(initialAnswers),[step,setStep]=useState(0),[saveStatus,setSaveStatus]=useState('Saved'),[saving,setSaving]=useState(false);
+export function GuidedQuestionnaire({caseId,fields,initialAnswers,initialRevision,clientEmail,readOnly,onDocuments,onRegisterSave,onBack}:{caseId:string;fields:QuestionnaireField[];initialAnswers:Record<string,string>;initialRevision:number;clientEmail:string;readOnly:boolean;onDocuments:(answers:Record<string,string>)=>void;onBack?:()=>void;onRegisterSave?:(save:(()=>Promise<void>)|null)=>void}){
+  const [answers,setAnswers]=useState(initialAnswers),[step,setStep]=useState(()=>{const raw=typeof window==='undefined'?null:new URLSearchParams(window.location.search).get('part');const n=Number(raw);return raw!==null&&Number.isInteger(n)&&n>=0&&n<sections.length?n:0;}),[saveStatus,setSaveStatus]=useState('Saved'),[saving,setSaving]=useState(false);
+  const sectionHeading=useRef<HTMLHeadingElement>(null);
+  useEffect(()=>{sectionHeading.current?.focus({preventScroll:true});sectionHeading.current?.scrollIntoView({block:'start'});},[step]);
   const latest=useRef(initialAnswers),saved=useRef(JSON.stringify(initialAnswers)),revision=useRef(initialRevision),queue=useRef<Promise<void>>(Promise.resolve()),conflict=useRef(false),mounted=useRef(true);
   useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
   async function save(){
@@ -29,11 +32,11 @@ export function GuidedQuestionnaire({caseId,fields,initialAnswers,initialRevisio
   useEffect(()=>{onRegisterSave?.(save);return()=>onRegisterSave?.(null);},[onRegisterSave]);
   useEffect(()=>{function warn(e:BeforeUnloadEvent){if(!readOnly&&JSON.stringify(latest.current)!==saved.current){e.preventDefault();e.returnValue='';}}window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[readOnly]);
   useEffect(()=>{if(readOnly||JSON.stringify(answers)===saved.current)return;const timer=setTimeout(()=>void save().catch(e=>{if(mounted.current)setSaveStatus(`Not saved: ${e.message}`);}),1200);return()=>clearTimeout(timer);},[answers,readOnly]);
-  async function move(next:number){if(!readOnly){try{await save();}catch(e){setSaveStatus(`Not saved: ${(e as Error).message}`);return;}}setStep(next);}
+  async function move(next:number){if(!readOnly){try{await save();}catch(e){setSaveStatus(`Not saved: ${(e as Error).message}`);return;}}setStep(next);if(!readOnly){const url=new URL(window.location.href);url.searchParams.set('part',String(next));window.history.replaceState(null,'',url);}}
   const section=sections[step],visible=fields.filter(f=>section.fields.includes(f));
-  return <div><p>Section {step+1} of {sections.length} · {section.title}</p><p role="status" aria-live="polite">{readOnly?'Staff view — read only':saveStatus}</p><p>You can leave unfinished sections and return later. Wait for “Saved securely” before closing the page. Required foreign-address details are checked when you send the case for review.</p>
-    <div className="portal-nav">{sections.map((s,i)=><button key={s.title} type="button" aria-pressed={step===i} disabled={saving} onClick={()=>void move(i)}>{i+1}. {s.title}</button>)}</div>
+  return <div><p>Part {step+1} of {sections.length}</p><h3 ref={sectionHeading} tabIndex={-1}>{section.title}</h3><p role="status" aria-live="polite">{readOnly?'Staff view — read only':saveStatus}</p><p>Select Save and continue at the bottom. You can also save and return later.</p>
+    {readOnly&&<div className="portal-nav">{sections.map((s,i)=><button key={s.title} type="button" aria-pressed={step===i} disabled={saving} onClick={()=>void move(i)}>{i+1}. {s.title}</button>)}</div>}
     <QuestionnaireFields fields={visible} answers={answers} clientEmail={clientEmail} readOnly={readOnly} onChange={(field,value)=>{const next={...latest.current,[field]:value};latest.current=next;setAnswers(next);setSaveStatus('Changes waiting to save…');}}/>
-    <div className="portal-nav">{step>0&&<button disabled={saving} onClick={()=>void move(step-1)}>Previous section</button>}{step<sections.length-1?<button disabled={saving} onClick={()=>void move(step+1)}>Save and continue</button>:<button disabled={saving} onClick={()=>void (async()=>{try{if(!readOnly)await save();onDocuments();}catch(e){setSaveStatus(`Not saved: ${(e as Error).message}`);}})()}>Continue to your documents</button>}{!readOnly&&<button disabled={saving} onClick={()=>void save().catch(e=>setSaveStatus(`Not saved: ${e.message}`))}>Save and return later</button>}</div>
+    <div className="portal-actions">{step===0&&onBack&&<button className="portal-secondary" disabled={saving} onClick={onBack}>Back to payment</button>}{step>0&&<button disabled={saving} onClick={()=>void move(step-1)}>Previous section</button>}{step<sections.length-1?<button disabled={saving} onClick={()=>void move(step+1)}>Save and continue</button>:<button disabled={saving} onClick={()=>void (async()=>{try{if(!readOnly)await save();if(!readOnly&&((latest.current.foreignAddress||'').trim().length<10||!foreignCountryOptions.includes(latest.current.foreignCountry||''))){setSaveStatus('Please complete your foreign address and country before continuing.');await move(1);return;}onDocuments(latest.current);}catch(e){setSaveStatus(`Not saved: ${(e as Error).message}`);}})()}>Continue to your documents</button>}{!readOnly&&<button disabled={saving} onClick={()=>void save().catch(e=>setSaveStatus(`Not saved: ${e.message}`))}>Save and return later</button>}</div><p role="status" aria-live="polite">{saveStatus}</p>
   </div>;
 }

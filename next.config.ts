@@ -2,7 +2,9 @@ import type { NextConfig } from 'next';
 import guides from './lib/guides.json';
 
 const nextConfig: NextConfig = {
-  images: { formats: ['image/avif', 'image/webp'] },
+  // Public images already ship as compressed WebP/SVG. Avoid native image
+  // transcoding at request time on the 512 MB Render instance.
+  images: { unoptimized: true },
   async redirects() {
     return [
       { source: '/index.html', destination: '/', permanent: true },

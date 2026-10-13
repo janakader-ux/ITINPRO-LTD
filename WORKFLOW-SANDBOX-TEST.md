@@ -10,7 +10,10 @@ This change implements the ITIN workflow approved on 13 October 2026. It is not 
 - Case, pending payment order, frozen engagement and review audit are created together in one transaction. Issuing the engagement does not create a Stripe checkout session or charge anyone.
 - Client signing happens before payment. Signing a new case automatically creates/finalizes/sends a Stripe sandbox service invoice bound to the case and signed agreement hash. The client can open the same invoice from Payment; staff can resend it without creating another invoice. A durable portal payment-request email handles Stripe’s sandbox email suppression. Provider acceptance is not proof of inbox receipt. Existing checkout cases retain their checkout path. Stale incomplete invoice requests and void invoices require adviser review.
 - A verified Stripe webhook reconciles the matching order. Only confirmed payment unlocks questionnaire saves and uploads. The return URL alone does not unlock anything.
-- Questionnaire has five short sections, partial server saves and revision checks. Foreign address is validated when sending for review. Case navigation saves pending edits; closing with unsaved edits prompts a warning.
+- Clients see four steps: Engagement → Payment → Your details → Documents. A compact progress indicator replaces client tabs; Back/Continue actions stay beside the task. Signing advances to payment; verified payment advances to details. Only staff see the full case-management tabs.
+- Payment opens in a separate window when the browser permits it, keeping the current application in place. The portal checks confirmation on focus and every 15 seconds while the payment step is visible.
+- Documents appear one at a time, with optional requirements/help and the passport illustration. Final review lists missing required uploads; both the client and server block sending incomplete required uploads. Draft decisions and later requests appear within step 4 when needed.
+- Questionnaire has five short sections, partial server saves and revision checks. Foreign address is validated when sending for review. Case navigation saves pending edits; closing with unsaved edits prompts a warning. Screen, questionnaire part and document position are view-only URL parameters, containing no answers or credentials. Required foreign-address completion returns the client to the address part; client questionnaire tabs are replaced by bottom navigation.
 - Clients can save the signed engagement as a PDF using the engagement's print/save button. W-7 wet signing, CAA interview and original-document inspection remain separate.
 - Client portal links are present in desktop/mobile navigation and footer. The portal remains noindex and clearly labelled as a test version.
 
@@ -20,11 +23,11 @@ Both `20261013164052_engagement_first_workflow.sql` and `20261013191500_selfserv
 
 ## Verification completed
 
-Production build and type checking pass. All 35 automated tests pass, including real Postgres/PGlite tests for transactional creation, unsigned-payment rejection, webhook unlock, client isolation, staff MFA, stale agreement/revision rejection, duplicate operations and legacy compatibility; checkout and invoice tests verify frozen fees, signed-agreement binding, identical retry parameters, reopening/resending the same invoice and stale/void guards. SQL tests check automated declaration gates and distinguish automatic audit events from staff actions.
+Production build and type checking pass. All 37 automated tests pass, including real Postgres/PGlite tests for transactional creation, unsigned-payment rejection, webhook unlock, client isolation, staff MFA, stale agreement/revision rejection, duplicate operations and legacy compatibility; checkout and invoice tests verify frozen fees, signed-agreement binding, identical retry parameters, reopening/resending the same invoice and stale/void guards. SQL tests check automated declaration gates and distinguish automatic audit events from staff actions.
 
 Security advisors show no new schema warnings. Existing server-only tables intentionally have RLS with no public policies. An existing leaked-password-protection warning remains; this portal signs in through email links.
 
-Visual browser automation could not run: Chromium was not installed and its download failed. Desktop/mobile interaction, real inbox receipt, real sandbox Stripe checkout and upload/download remain to be verified in the deployed sandbox. They must not be described as passed yet.
+The revised client screens render successfully in the component checks. The cloud browser rejected opening the local offline fixture because file URLs are blocked; no alternate browser route was used. A synthetic interactive HTML demonstration is available for owner review. This is not a real authenticated payment/upload acceptance test. Desktop/mobile interaction, real inbox receipt, real sandbox Stripe checkout and upload/download remain to be verified in the deployed sandbox. They must not be described as passed yet.
 
 ## Deployment configuration
 
