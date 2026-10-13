@@ -94,3 +94,8 @@ test('questionnaire renders mandatory foreign inputs, dropdowns and live copied 
   assert.match(html,/<input(?=[^>]*name="dateOfBirth")(?=[^>]*type="text")(?=[^>]*value="01\/01\/1980")[^>]*>/);
   assert(!html.includes('OLD ADDRESS'));
 });
+
+ test('payment-last engagement describes intake before payment without changing source work-start terms',()=>{
+ const e=engagementSnapshot({id:'11111111-1111-4111-8111-111111111111',legal_name:'TEST APPLICANT',address:'Dummy address',route_id:'spouse',fee:39500,tax_year:2026,created_at:'2026-10-13T12:00:00Z',workflow:'payment-last'});
+ assert.match(e.version,/payment-last$/);assert.match(e.snapshot.paragraphs.join(' '),/upload the documents you have, then pay/);assert.match(e.snapshot.paragraphs.join(' '),/Professional review and preparation begin only after confirmed payment/);
+ });

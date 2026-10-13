@@ -6,6 +6,7 @@ import { queuePortalNotice } from './notifications';
 export async function issueCaseInvoice(db:ReturnType<typeof paymentDatabase>,stripe:Stripe,caseId:string,resendKey?:string){
   const c=await db.from('portal_cases').select('*').eq('id',caseId).single();
   if(c.error||!c.data?.test_only||c.data.status!=='awaiting_payment')throw new Error('CASE_ACCESS_DENIED');
+  if(c.data.workflow==='payment-last'&&!c.data.intake_submitted_at)throw new Error('INTAKE_REQUIRED');
   const a=await db.from('portal_agreements').select('accepted_at,sha256').eq('case_id',caseId).single();
   if(a.error||!a.data?.accepted_at)throw new Error('AGREEMENT_REQUIRED');
   const o=await db.from('payment_orders').select('*').eq('id',c.data.payment_order_id).single();
@@ -14,7 +15,8 @@ export async function issueCaseInvoice(db:ReturnType<typeof paymentDatabase>,str
   const owner=await db.from('portal_accounts').select('email,active,role').eq('user_id',c.data.owner_id).single();
   if(owner.error||!owner.data?.active||owner.data.role!=='client'||owner.data.email!==process.env.PORTAL_TEST_CLIENT_EMAIL?.trim().toLowerCase())throw new Error('SANDBOX_ONLY');
   await verifySandboxCatalog(stripe);
-  const stale=Date.now()-Date.parse(order.created_at)>23*60*60*1000;
+  const claim=await db.rpc('portal_claim_invoice_start',{p_order:order.id});if(claim.error||!claim.data)throw claim.error||new Error('INVALID_INPUT');
+  const stale=Date.now()-Date.parse(claim.data)>23*60*60*1000;
   if(stale&&!order.stripe_invoice_id)throw new Error('PAYMENT_SESSION_ENDED');
   const key=`itinpro/case-invoice/${order.id}`;
   const customer=order.stripe_customer_id?await stripe.customers.retrieve(order.stripe_customer_id):await stripe.customers.create({email:owner.data.email,name:c.data.legal_name,metadata:{app:'itinpro',case_id:caseId}},{idempotencyKey:`${key}/customer`});

@@ -1,9 +1,10 @@
 import template from './engagement-template.json';
 import { getApplicationRoute, routeChecklist } from './checklists';
 import { documentHash } from './validation';
-export function engagementSnapshot(c: {id:string;legal_name:string;address:string;route_id:string;fee:number;tax_year:number;created_at:string}) {
+export function engagementSnapshot(c: {id:string;legal_name:string;address:string;route_id:string;fee:number;tax_year:number;created_at:string;workflow?:string}) {
   const route=getApplicationRoute(c.route_id)!;
-  const fields:Record<string,string>={CASE_ID:c.id,AGREEMENT_VERSION:template.version,PRESENTED_AT:new Date().toISOString(),
+  const version=c.workflow==='payment-last'?`${template.version}-payment-last`:template.version;
+  const fields:Record<string,string>={CASE_ID:c.id,AGREEMENT_VERSION:version,PRESENTED_AT:new Date().toISOString(),
     CLIENT_LEGAL_NAME:c.legal_name,CLIENT_ADDRESS:c.address,SERVICE_NAME:route.title,SERVICE_CATEGORY:route.title,
     W7_ROUTE:route.purpose,W7_ROUTE_AND_PURPOSE:route.purpose,APPLICANT_NAMES:c.legal_name,FEE_GBP:String(c.fee/100),VAT_WORDING:'all-inclusive, no VAT',
     ADDITIONAL_CHARGES:'None agreed. Any travel, courier or third-party charge requires separate agreement and invoice.',
@@ -14,6 +15,8 @@ export function engagementSnapshot(c: {id:string;legal_name:string;address:strin
     CLIENT_SIGNATURE:'Recorded separately in the acceptance certificate',SIGNED_AT:'Recorded separately in the acceptance certificate',SIGNER_EMAIL:'Recorded separately in the acceptance certificate',SIGNATURE_AUDIT_ID:c.id,
     ACCEPT_TERMS_CHECKBOX:'Client must explicitly accept',DOCUMENT_READINESS_CHECKBOX:'Client must explicitly confirm',IDENTITY_ROUTE_CHECKBOX:'Client must explicitly confirm',PRIVACY_ACK_CHECKBOX:'Client must explicitly acknowledge',START_EARLY_CHECKBOX:'Separate optional choice; never preselected'};
   const fill=(s:string)=>s.replace(/\{\{([A-Z0-9_]+)\}\}/g,(_,key)=>fields[key]||'To be confirmed before acceptance');
-  const snapshot={version:template.version,paragraphs:template.paragraphs.map(fill),tables:template.tables.map(t=>t.map(r=>r.map(fill)))};
-  return {version:template.version,snapshot,sha256:documentHash(snapshot)};
+  const paragraphs=template.paragraphs.map(fill);
+  if(c.workflow==='payment-last')paragraphs.push('Your portal steps are: sign this engagement, provide your details, upload the documents you have, then pay the agreed fee. If information or documents are missing, our team will request them after payment. Professional review and preparation begin only after confirmed payment and when work may start under this engagement.');
+  const snapshot={version,paragraphs,tables:template.tables.map(t=>t.map(r=>r.map(fill)))};
+  return {version,snapshot,sha256:documentHash(snapshot)};
 }

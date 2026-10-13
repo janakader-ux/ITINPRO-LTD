@@ -17,7 +17,7 @@ test('short eligibility supports help choosing, screens SSN eligibility and excl
   assert.equal(clientNextAction('awaiting_payment',true,false).tab,'payment');
   assert.equal(clientNextAction('collecting',true,true).tab,'information');
 });
-test('Postgres enforces engagement before payment, payment before saves, retries, revisions and legacy compatibility',async()=>{
+test('Postgres enforces engagement before payment, intake before payment, retries, revisions and legacy compatibility',async()=>{
   const db=new PGlite();
   try{
     await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create schema storage;create table auth.users(id uuid primary key);
@@ -25,7 +25,7 @@ test('Postgres enforces engagement before payment, payment before saves, retries
       create function auth.jwt() returns jsonb language sql stable as $$select coalesce(nullif(current_setting('request.jwt.claims',true),''),'{}')::jsonb$$;
       grant usage on schema auth,storage to authenticated,anon,service_role;grant execute on function auth.uid(),auth.jwt() to authenticated,anon,service_role;
       create table storage.objects(bucket_id text,name text);alter table storage.objects enable row level security;`);
-    for(const f of ['supabase.sql','supabase-payments.sql','supabase-portal.sql','supabase/migrations/20261013164052_engagement_first_workflow.sql','supabase/migrations/20261013191500_selfservice_and_invoice_workflow.sql'])await db.exec(await readFile(new URL(`../${f}`,import.meta.url),'utf8'));
+    for(const f of ['supabase.sql','supabase-payments.sql','supabase-portal.sql','supabase/migrations/20261013164052_engagement_first_workflow.sql','supabase/migrations/20261013191500_selfservice_and_invoice_workflow.sql','supabase/migrations/20261013204000_payment_last_workflow.sql'])await db.exec(await readFile(new URL(`../${f}`,import.meta.url),'utf8'));
     await db.exec(`insert into auth.users values('${owner}'),('${other}'),('${staff}');insert into portal_accounts(user_id,email,role) values('${owner}','owner@example.com','client'),('${other}','other@example.com','client'),('${staff}','staff@example.com','staff');`);
     const intake={flowVersion:'eligibility-v2',service:'itin',testOnly:true};
     await db.query("insert into enquiries(id,name,email,reason,location,message,consented_at,intake) values($1,'TEST APPLICANT','test@example.com','Synthetic spouse enquiry','UK','AUTOMATED TEST ONLY',now(),$2)",[enquiry,intake]);
@@ -46,14 +46,25 @@ test('Postgres enforces engagement before payment, payment before saves, retries
     const accept=(actor=owner,h=hash)=>db.query('select portal_accept_agreement($1,$2,$3,$4,true)',[caseId,actor,h,'TEST APPLICANT']);
     await assert.rejects(accept(other),/CASE_ACCESS_DENIED/);await assert.rejects(accept(owner,'b'.repeat(64)),/AGREEMENT_VERSION_MISMATCH/);
     await accept();await accept();
-    assert.equal((await db.query<{status:string}>('select status from portal_cases')).rows[0].status,'awaiting_payment');
-    const save=(actor=owner,rev=0)=>db.query<{revision:number}>('select portal_save_answers($1,$2,$3,$4) as revision',[caseId,actor,{firstName:'TEST'},rev]);
-    await assert.rejects(save(),/CASE_ACCESS_DENIED|PAYMENT_REQUIRED/);
-    await paid();await paid();
     assert.equal((await db.query<{status:string}>('select status from portal_cases')).rows[0].status,'collecting');
-    assert.equal((await save()).rows[0].revision,1,'partial draft does not require foreign address yet');
-    await assert.rejects(save(other,1),/CASE_ACCESS_DENIED/);await assert.rejects(save(owner,0),/ANSWERS_VERSION_MISMATCH/);
-    assert.equal((await save(owner,1)).rows[0].revision,2);
+    const save=(actor=owner,rev=0)=>db.query<{revision:number}>('select portal_save_answers($1,$2,$3,$4) as revision',[caseId,actor,{firstName:'TEST'},rev]);
+    assert.equal((await save()).rows[0].revision,1,'signed unpaid client can save partial intake');
+    await assert.rejects(paid(),/INTAKE_REQUIRED/);
+    await assert.rejects(db.query('select portal_prepare_payment($1,$2,$3)',[caseId,other,[]]),/CASE_ACCESS_DENIED/);
+    await db.query('select portal_prepare_payment($1,$2,$3)',[caseId,owner,['passport-spread','foreign-address']]);
+    await db.query('select portal_prepare_payment($1,$2,$3)',[caseId,owner,['passport-spread','foreign-address']]);
+    await db.query("update payment_orders set created_at=now()-interval '3 days' where id=$1",[order]);
+    await db.query('update payment_orders set stripe_invoice_id=null where id=$1',[order]);
+    const started=(await db.query<{started:string}>('select portal_claim_invoice_start($1) as started',[order])).rows[0].started;
+    assert(Date.now()-Date.parse(started)<60000,'first invoice attempt can start days after enquiry');
+    assert.equal(String((await db.query<{started:string}>('select portal_claim_invoice_start($1) as started',[order])).rows[0].started),String(started),'invoice retries share their original attempt time');
+    await db.query('update payment_orders set stripe_invoice_id=$1 where id=$2',['in_test_workflow',order]);
+    await paid();await paid();
+    assert.equal((await db.query<{status:string}>('select status from portal_cases')).rows[0].status,'review');
+    assert.equal((await db.query('select * from portal_notifications')).rows.length,1,'one durable review notification despite retries');
+    assert.equal((await save(owner,1)).rows[0].revision,2,'partial draft does not require foreign address yet');
+    await assert.rejects(save(other,2),/CASE_ACCESS_DENIED/);await assert.rejects(save(owner,0),/ANSWERS_VERSION_MISMATCH/);
+    assert.equal((await save(owner,2)).rows[0].revision,3);
     await db.query("select apply_payment_event($1,$2,$3,39500,'gbp','invoice','failed')",['evt_late_fail',order,'in_test_workflow']);
     assert.equal((await db.query<{status:string}>('select status from payment_orders')).rows[0].status,'paid');
     await db.exec(`set request.jwt.claim.sub='${other}';set request.jwt.claims='{"aal":"aal1"}';set role authenticated;`);

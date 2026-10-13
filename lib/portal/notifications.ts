@@ -19,7 +19,7 @@ export async function sendPendingNotices(caseId:string) {
     try{
       const to=item.recipient==='staff'?process.env.PORTAL_STAFF_EMAIL?.trim():owner.data.email;
       if(!to)continue;
-      if(item.event_key===`case-${caseId}`&&item.recipient==='client'&&c.data.workflow==='engagement-first'){
+      if(item.event_key===`case-${caseId}`&&item.recipient==='client'&&['engagement-first','payment-last'].includes(c.data.workflow)){
         const sent=await sendPortalLink(to);if(!sent)continue;
         const saved=await db.from('portal_notifications').update({state:'accepted',provider_email_id:sent.emailId}).eq('event_key',item.event_key).eq('state','pending');if(saved.error)continue;
         accepted++;continue;
@@ -38,9 +38,12 @@ export async function repairAndRetryNotices(caseId:string) {
   const requests=await db.from('portal_requests').select('id').eq('case_id',caseId);
   const documents=await db.from('portal_documents').select('id,kind,visibility').eq('case_id',caseId);
   if(requests.error || documents.error)throw requests.error || documents.error;
+  const c=await db.from('portal_cases').select('workflow,payment_order_id').eq('id',caseId).single();if(c.error)throw c.error;
+  const payment=await db.from('payment_orders').select('status').eq('id',c.data.payment_order_id).single();if(payment.error)throw payment.error;
+  const notifyUploads=c.data.workflow!=='payment-last'||payment.data.status==='paid';
   const entries=[{event_key:`case-${caseId}`,case_id:caseId,recipient:'client'},
     ...(requests.data||[]).map(x=>({event_key:`request-${x.id}`,case_id:caseId,recipient:'client'})),
-    ...(documents.data||[]).flatMap(x=>[{event_key:`upload-${x.id}`,case_id:caseId,recipient:'staff'},
+    ...(documents.data||[]).flatMap(x=>[...(notifyUploads?[{event_key:`upload-${x.id}`,case_id:caseId,recipient:'staff'}]:[]),
       ...(x.kind==='draft' && x.visibility==='client'?[{event_key:`draft-${x.id}`,case_id:caseId,recipient:'client'}]:[]),
       ...(['submission','outcome'].includes(x.kind) && x.visibility==='client'?[{event_key:`record-${x.id}`,case_id:caseId,recipient:'client'}]:[])])];
   const insert=await db.from('portal_notifications').upsert(entries,{onConflict:'event_key',ignoreDuplicates:true});if(insert.error)throw insert.error;
