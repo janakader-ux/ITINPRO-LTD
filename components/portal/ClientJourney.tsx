@@ -1,4 +1,5 @@
 'use client';
+import { BrandLogo } from '@/components/BrandLogo';
 import { useEffect,useRef,useState,type ReactNode } from 'react';
 import { Check,FileSignature,CreditCard,UserRound,FolderUp } from 'lucide-react';
 import type { CaseData } from './CaseView';
@@ -51,7 +52,7 @@ export function ClientJourney({data:d,fields,busy,message,upload,onBack,perform,
     </div>:<>
       <div className="portal-current-step portal-no-print"><p>Step {step+1} of 4</p><h2 ref={heading} tabIndex={-1}>{clientSteps[step]}</h2><p>{guidance[step]}</p></div>
       {step===0&&!a&&<p>Your engagement is being prepared. Please contact your adviser if it does not appear.</p>}
-      {step===0&&a&&<div className="portal-agreement">
+      {step===0&&a&&<div className="portal-agreement"><BrandLogo/>
         <p><strong>{route.title} · £{c.fee/100}, all-inclusive, no VAT.</strong></p>
         {!signed?<><p>The fee covers the full Form W-7 / CAA service. Tax-return preparation and separately agreed travel or courier charges are excluded.</p>
           {a.snapshot.paragraphs.map((text,i)=><p key={i}>{text}</p>)}{a.snapshot.tables.map((table,i)=><table key={i}><tbody>{table.map((row,j)=><tr key={j}>{row.map((cell,k)=><td key={k}>{cell}</td>)}</tr>)}</tbody></table>)}
