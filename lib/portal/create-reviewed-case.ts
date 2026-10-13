@@ -27,7 +27,7 @@ export async function createReviewedCase(admin:ReturnType<typeof paymentDatabase
   if(account.error||account.data.role!=='client'||!account.data.active||account.data.email!==recipient)throw new Error('INVALID_INPUT');
   const c={id:randomUUID(),owner_id:link.user.id,enquiry_id:e.id,legal_name:input.legalName,address:input.address,
     route_id:route.id,price_category:route.priceCategory,fee:routeFee(route.id),tax_year:input.taxYear,
-    checklist_version:checklistVersion,screening:{...input.screening,mode:actorId===null?'self-service':'assisted'},created_at:new Date().toISOString()};
+    workflow:'payment-last',checklist_version:checklistVersion,screening:{...input.screening,mode:actorId===null?'self-service':'assisted'},created_at:new Date().toISOString()};
   const agreement=engagementSnapshot(c);
   const result=await admin.rpc('portal_create_engagement_case',{p_case:c,p_agreement:agreement.snapshot,p_hash:agreement.sha256,p_actor:actorId});
   if(result.error)throw new Error(/ENQUIRY_ALREADY_REVIEWED|ORDER_MISMATCH/.test(result.error.message)?'ENQUIRY_ALREADY_REVIEWED':'PORTAL_TEMPORARILY_UNAVAILABLE');

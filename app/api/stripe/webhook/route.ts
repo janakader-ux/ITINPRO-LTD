@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type Stripe from 'stripe';
 import { logPaymentFailure, paymentDatabase, stripeClient } from '@/lib/payments';
+import { sendPendingNotices } from '@/lib/portal/notifications';
 import { paymentChange } from '@/lib/payment-events';
 
 export async function POST(request: Request) {
@@ -19,6 +20,11 @@ export async function POST(request: Request) {
       p_reference: change.reference, p_amount: change.amount, p_currency: change.currency,
       p_kind: change.kind, p_status: change.status });
     if (error) throw error;
+    if(change.status==='paid'){
+      const cases=await db.from('portal_cases').select('id').eq('payment_order_id',change.orderId).eq('workflow','payment-last');
+      if(cases.error)throw cases.error;
+      for(const c of cases.data||[])await sendPendingNotices(c.id).catch(()=>{});
+    }
     console.info('itinpro_payment_event', JSON.stringify({ eventId: event.id, orderId: change.orderId, result: data }));
     return NextResponse.json({ received: true });
   } catch (error) {

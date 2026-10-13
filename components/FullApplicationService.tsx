@@ -8,7 +8,7 @@ export function FullApplicationService(){
     </aside>
     <h3 className="mt-10 font-display text-2xl text-white">How our full service works</h3>
     <ol className="mt-6 grid gap-5 md:grid-cols-3">
-      <li className="glass rounded-2xl p-5"><h4 className="font-semibold text-gold">1. Start your application</h4><p className="mt-3 leading-7 text-silver">Choose your situation or ask us to help. Review the service, requirements and fee, then sign your engagement before paying.</p></li>
+      <li className="glass rounded-2xl p-5"><h4 className="font-semibold text-gold">1. Start your application</h4><p className="mt-3 leading-7 text-silver">Choose your situation or ask us to help. Review the service, requirements and fee, then sign your engagement. Provide your details and the documents you have, then pay to proceed with our review.</p></li>
       <li className="glass rounded-2xl p-5"><h4 className="font-semibold text-gold">2. Provide documents and verify identity</h4><p className="mt-3 leading-7 text-silver">Provide your information and case-specific evidence. Arrange the CAA interview and inspection of original documents or copies certified by the issuing agency. An uploaded scan alone is not enough.</p></li>
       <li className="glass rounded-2xl p-5"><h4 className="font-semibold text-gold">3. Review and submit</h4><p className="mt-3 leading-7 text-silver">We review Form W-7 and the supporting package, arrange the required signatures, complete Form W-7 (COA) where appropriate, and submit to the IRS. The IRS decides whether to issue an ITIN.</p></li>
     </ol>
