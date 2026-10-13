@@ -8,7 +8,7 @@ export function SiteHeader() {
   const [open,setOpen]=useState(false);
   return <header className="sticky top-0 z-50 border-b border-white/10 bg-midnight/85 backdrop-blur-xl">
     <div className="container-premium flex min-h-20 items-center justify-between gap-6">
-      <Link href="/" aria-label="ITIN Pro home" className="shrink-0"><Image src="/itinpro-header-logo.svg" alt="ITIN Pro" width={165} height={78} priority /></Link>
+      <Link href="/" aria-label="ITIN Pro home" className="flex shrink-0 flex-col gap-1 py-3"><Image src="/itinpro-header-logo.svg" alt="ITIN PRO — ITIN application and CAA support" width={200} height={46} priority /><span className="text-xs leading-4 text-slate-200">Full ITIN application service</span></Link>
       <nav aria-label="Main navigation" className="hidden items-center gap-6 text-sm font-semibold text-slate-200 lg:flex">
         <Link href="/">Home</Link><Link href="/#services">Services</Link><Link href="/guides">ITIN Guides / FAQs</Link><Link href="/portal">Client portal</Link><Link href="/#locations">Locations</Link><Link className="gold-button" href="/#enquiry">Start your enquiry</Link>
       </nav>
