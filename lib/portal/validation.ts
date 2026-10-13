@@ -19,7 +19,7 @@ export function validateFile(bytes: Uint8Array, name: string, mime: string) {
   return expected;
 }
 export function portalOrigin(fallback = 'https://itinpro-uk.onrender.com') {
-  return new URL(process.env.RENDER_EXTERNAL_URL || process.env.APP_URL || fallback).origin;
+  return new URL(process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || fallback).origin;
 }
 export function sameOrigin(request: Request) {
   const origin = request.headers.get('origin');
