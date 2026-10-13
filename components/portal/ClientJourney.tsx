@@ -1,0 +1,90 @@
+'use client';
+import { useEffect,useRef,useState,type ReactNode } from 'react';
+import { Check,FileSignature,CreditCard,UserRound,FolderUp } from 'lucide-react';
+import type { CaseData } from './CaseView';
+import type { QuestionnaireField } from '@/lib/portal/questionnaire';
+import { foreignCountryOptions } from '@/lib/portal/questionnaire';
+import { routeChecklist,getApplicationRoute,w7SignatureInstructions } from '@/lib/portal/checklists';
+import { casePaymentMatches } from '@/lib/portal/workflow';
+import { clientSteps,resumeClientStep,missingRequiredUploads } from '@/lib/portal/client-journey';
+import { GuidedQuestionnaire } from './GuidedQuestionnaire';
+import { SupportingLetter } from './SupportingLetter';
+
+const icons=[FileSignature,CreditCard,UserRound,FolderUp];
+export function ClientJourney({data:d,fields,busy,message,upload,onBack,perform,pay}:{data:CaseData;fields:QuestionnaireField[];busy:boolean;message:string;upload:(id:string)=>ReactNode;onBack:()=>Promise<void>;perform:(body:Record<string,unknown>)=>Promise<boolean>;pay:()=>Promise<boolean>}){
+  const c=d.case,a=d.portal_agreements[0],signed=!!a?.accepted_at,paid=casePaymentMatches(c,d.payment),route=getApplicationRoute(c.route_id)!;
+  const [step,setStep]=useState(()=>{
+    const raw=new URLSearchParams(typeof window==='undefined'?'':window.location.search).get('step');
+    return resumeClientStep(signed,paid,c.status,d.portal_documents.some(x=>x.kind==='upload'),raw===null?undefined:Number(raw));
+  });
+  const [intro,setIntro]=useState(!signed&&(typeof window==='undefined'||!new URLSearchParams(window.location.search).has('step'))),[documentIndex,setDocumentState]=useState(()=>{const raw=typeof window==='undefined'?null:new URLSearchParams(window.location.search).get('document');const n=Number(raw);return raw!==null&&Number.isInteger(n)&&n>=0&&n<=routeChecklist(c.route_id).length?n:0;}),[informationComplete,setInformationComplete]=useState(step===3),[error,setError]=useState('');
+  const signedLetter=useRef<HTMLDetailsElement>(null),refresh=useRef(perform),wasPaid=useRef(paid);refresh.current=perform;
+  const heading=useRef<HTMLHeadingElement>(null),saveInformation=useRef<(()=>Promise<void>)|null>(null);
+  const docs=d.portal_documents,requirements=routeChecklist(c.route_id),missing=missingRequiredUploads(requirements,docs);
+  const collected=!['collecting','missing_information','awaiting_agreement','awaiting_payment'].includes(c.status),cancelled=c.status==='cancelled';
+  const completed=[signed,paid,informationComplete||collected,collected&&!cancelled];
+  useEffect(()=>{heading.current?.focus({preventScroll:true});heading.current?.scrollIntoView({block:'start',behavior:'auto'});},[step,documentIndex,intro,c.status]);
+  function setDocumentIndex(index:number){setDocumentState(index);const url=new URL(window.location.href);url.searchParams.set('document',String(index));window.history.replaceState(null,'',url);}
+  async function move(next:number){
+    setError('');try{await saveInformation.current?.();}catch(e){setError((e as Error).message);return;}
+    setIntro(false);setStep(next);
+    const url=new URL(window.location.href);url.searchParams.set('case',c.id);url.searchParams.set('step',String(next));url.searchParams.delete('part');window.history.replaceState(null,'',url);
+  }
+  useEffect(()=>{if(step!==1||!signed||paid||!d.paymentsEnabled)return;const check=()=>{if(!document.hidden)void refresh.current({action:'refresh-payment'});};const timer=setInterval(check,15000);window.addEventListener('focus',check);return()=>{clearInterval(timer);window.removeEventListener('focus',check);};},[step,signed,paid,d.paymentsEnabled]);
+  useEffect(()=>{if(paid&&!wasPaid.current&&step===1)void move(2);wasPaid.current=paid;},[paid,step]);
+  async function backToCases(){try{await saveInformation.current?.();await onBack();}catch(e){setError((e as Error).message);}}
+  const currentDocument=requirements[documentIndex];
+  const guidance=['Read the service and fee, then sign below.','Pay the fee agreed in your signed engagement.','Complete a few short sections. Your answers save securely.','Upload one document at a time, then send your application for review.'];
+  return <section className="portal-panel portal-client-journey">
+    <div className="portal-no-print"><div className="portal-case-context"><button className="portal-secondary" onClick={()=>void backToCases()}>My cases</button><span>{c.legal_name} · £{c.fee/100}</span></div>
+      <ol className="portal-stepper" aria-label="Application progress">{clientSteps.map((title,i)=>{const Icon=icons[i];return <li key={title} aria-current={!intro&&step===i?'step':undefined} className={completed[i]?'is-complete':step===i?'is-current':''}><span className="portal-step-icon">{completed[i]?<Check size={20} aria-label="Completed"/>:<Icon size={20} aria-hidden="true"/>}</span><span>{i+1}. {title}</span></li>;})}</ol>
+      <progress max={4} value={completed.filter(Boolean).length} aria-label={`${completed.filter(Boolean).length} of 4 steps completed`}/>
+      <p className="portal-save-note">Your signed engagement, payment status and saved answers stay with your case.</p>
+      {(error||message)&&<p role={error?'alert':'status'}>{error||message}</p>}
+    </div>
+    {cancelled?<><h2 ref={heading} tabIndex={-1}>This case is closed</h2><p>Contact your adviser before proceeding.</p></>:intro?<div className="portal-no-print">
+      <h2 ref={heading} tabIndex={-1}>Four simple steps</h2><p>Complete one step, then select Continue. You can return to saved work later.</p>
+      <div className="portal-start-guide">{clientSteps.map((title,i)=>{const Icon=icons[i];return <div key={title}><Icon size={28} aria-hidden="true"/><strong>{i+1}. {title}</strong><p>{['Review your service and sign.','Pay after signing.','Tell us about yourself.','Upload your evidence.'][i]}</p></div>;})}</div>
+      <p>Keep your passport and supporting documents nearby. We provide the full application service; original-document checks and final CAA review follow.</p>
+      <div className="portal-actions"><button disabled={busy} onClick={()=>void move(0)}>Begin: review engagement</button></div>
+    </div>:<>
+      <div className="portal-current-step portal-no-print"><p>Step {step+1} of 4</p><h2 ref={heading} tabIndex={-1}>{clientSteps[step]}</h2><p>{guidance[step]}</p></div>
+      {step===0&&!a&&<p>Your engagement is being prepared. Please contact your adviser if it does not appear.</p>}
+      {step===0&&a&&<div className="portal-agreement">
+        <p><strong>{route.title} · £{c.fee/100}, all-inclusive, no VAT.</strong></p>
+        {!signed?<><p>The fee covers the full Form W-7 / CAA service. Tax-return preparation and separately agreed travel or courier charges are excluded.</p>
+          {a.snapshot.paragraphs.map((text,i)=><p key={i}>{text}</p>)}{a.snapshot.tables.map((table,i)=><table key={i}><tbody>{table.map((row,j)=><tr key={j}>{row.map((cell,k)=><td key={k}>{cell}</td>)}</tr>)}</tbody></table>)}
+          <form className="portal-no-print" onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);void (async()=>{const ok=await perform({action:'accept',acceptance:{hash:a.sha256,signature:f.get('signature'),terms:f.has('terms'),documents:f.has('documents'),identity:f.has('identity'),privacy:f.has('privacy'),startEarly:f.has('startEarly')}});if(ok)await move(1);})();}}>
+            <label><input name="terms" type="checkbox" required/> I have read and accept this engagement and Schedule 1.</label>
+            <label><input name="documents" type="checkbox" required/> My information is accurate and the requested documents are available or will be obtained.</label>
+            <label><input name="identity" type="checkbox" required/> I confirm the identity/SSN declarations and understand the original-document verification requirement.</label>
+            <label><input name="privacy" type="checkbox" required/> I have read the <a href="/privacy" target="_blank" rel="noreferrer">privacy notice</a>.</label>
+            <label><input name="startEarly" type="checkbox"/> I request an early start within the 14-day cancellation period, subject to the engagement terms.</label>
+            <label>Type your full legal name<input name="signature" required minLength={2} maxLength={100}/></label>
+            <div className="portal-actions"><button disabled={busy}>Sign and continue to payment</button></div>
+          </form></>:<><p className="portal-success">✓ Signed by {a.typed_signature} on {new Date(a.accepted_at!).toLocaleDateString('en-GB')}.</p><details ref={signedLetter}><summary>View your signed letter and acceptance record</summary>{a.snapshot.paragraphs.map((text,i)=><p key={i}>{text}</p>)}{a.snapshot.tables.map((table,i)=><table key={i}><tbody>{table.map((row,j)=><tr key={j}>{row.map((cell,k)=><td key={k}>{cell}</td>)}</tr>)}</tbody></table>)}<p>Signed by {a.typed_signature} ({a.signer_email}) at {new Date(a.accepted_at!).toLocaleString('en-GB')}.</p><p>Work may start from {new Date(a.work_may_start_at).toLocaleString('en-GB')}. Early start requested: {a.start_early?'Yes':'No'}.</p><p>Version {a.version} · Case {c.id} · SHA-256: <code>{a.sha256}</code></p><p>Engagement acceptance does not sign Form W-7.</p></details><button className="portal-no-print portal-secondary" onClick={()=>{const open=signedLetter.current?.open;if(signedLetter.current)signedLetter.current.open=true;window.print();if(signedLetter.current)signedLetter.current.open=!!open;}}>Save signed letter as PDF</button><div className="portal-actions portal-no-print"><button onClick={()=>void move(1)}>Continue to payment</button></div></>}
+      </div>}
+      {step===1&&<div><p className="portal-fee">£{c.fee/100} <small>GBP · no VAT</small></p>{paid?<><p className="portal-success">✓ Payment confirmed. You can now complete your details.</p><div className="portal-actions"><button className="portal-secondary" onClick={()=>void move(0)}>Back</button><button disabled={busy} onClick={()=>void move(2)}>Continue to your details</button></div></>:<><p>Use a test card only. No real funds are charged.</p>{!d.paymentsEnabled&&<p>Test payments are temporarily closed. Your signed engagement is saved.</p>}<div className="portal-actions"><button className="portal-secondary" onClick={()=>void move(0)}>Back</button><button disabled={busy||!signed||!d.paymentsEnabled} onClick={()=>void pay()}>Open Stripe payment</button></div><p>Already paid? <button className="portal-secondary" disabled={busy} onClick={()=>void perform({action:'refresh-payment'})}>Check confirmation</button></p><details><summary>Payment help</summary><p>Payment unlocks the next step only after confirmation. Returning from Stripe alone does not confirm payment. If confirmation is delayed, return to this case later; do not pay again.</p></details></>}</div>}
+      {step===2&&signed&&paid&&<><GuidedQuestionnaire key={c.id} caseId={c.id} fields={fields} initialAnswers={d.portal_answers[0]?.answers||{}} initialRevision={d.portal_answers[0]?.revision||0} clientEmail={d.clientEmail} readOnly={!['collecting','review','missing_information'].includes(c.status)} onRegisterSave={save=>{saveInformation.current=save;}} onBack={()=>void move(1)} onDocuments={answers=>{
+        if((answers.foreignAddress||'').trim().length<10||!foreignCountryOptions.includes(answers.foreignCountry||'')){setError('Complete your foreign address and select its country before continuing. Open the Addresses section to finish it.');return;}
+        setInformationComplete(true);void move(3);
+      }}/></>}
+      {step===3&&signed&&paid&&<>
+        {c.status==='draft_shared'?<><h3>Check your prepared Form W-7</h3><p>Review the draft, then approve it or request changes. Approval does not sign Form W-7.</p>{docs.filter(x=>x.id===c.current_draft_id&&x.visibility==='client').map(doc=><div key={doc.id}><a href={`/api/portal/download?id=${doc.id}`}>Download {doc.name}</a>{!d.portal_approvals.some(x=>x.document_id===doc.id)?<form onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);void perform({action:'approve',decision:{documentId:doc.id,hash:doc.sha256,decision:f.get('decision'),comment:String(f.get('comment')||'')}});}}><label>Your decision<select name="decision"><option value="approved">I approve this draft</option><option value="changes_requested">Please make changes</option></select></label><label>Changes or comments<textarea name="comment" maxLength={1500}/></label><label><input type="checkbox" required/> I have checked this draft and understand that a separate original signature is required.</label><button disabled={busy}>Send my decision</button></form>:<p>Your decision is recorded.</p>}</div>)}<details><summary>How to sign the final W-7</summary><p>{w7SignatureInstructions}</p></details></>:collected?<><h3>{c.status==='complete'?'Your case is complete':c.status==='submitted'?'Application submission recorded':'Your next stage'}</h3><p>{c.status==='review'?'Your information and documents have been sent for CAA review. We will contact you if anything else is needed.':['draft_approved','verification'].includes(c.status)?'Your draft is approved. Your adviser will arrange the original-document checks, interview and handwritten signatures.':c.status==='submitted'?'Your adviser has recorded submission. The IRS decides the application.':'Your adviser will keep the case updated here.'}</p><p className="portal-success">Current stage: {c.status.replaceAll('_',' ')}</p>{docs.filter(x=>['submission','outcome'].includes(x.kind)&&x.visibility==='client').map(doc=><p key={doc.id}><a href={`/api/portal/download?id=${doc.id}`}>{doc.name}</a></p>)}</>:<>
+          {d.portal_requests.some(r=>!r.resolved)&&<details open><summary>Your adviser needs an update</summary>{d.portal_requests.filter(r=>!r.resolved).map(r=><div key={r.id}><p>{r.message}</p>{d.uploadsEnabled&&upload(r.item_id)}</div>)}</details>}
+          {currentDocument?<><p>Document {documentIndex+1} of {requirements.length} · {missing.length} required uploads still needed</p><h3>{currentDocument.title}</h3><p>{currentDocument.conditional?'Provide this if it applies to you.':'Upload this document before sending for review.'}</p><details><summary>What should this document show?</summary><p>{currentDocument.instructions}</p>{currentDocument.conditional&&<p>Required when: {currentDocument.conditional}.</p>}{currentDocument.id==='passport-spread'&&<img src="/portal-passport-guide.svg" alt="Example: the complete passport photograph page and facing page, with all edges visible" width={520} height={480}/>}</details>
+            {currentDocument.id.includes('letter')&&<SupportingLetter routeId={c.route_id}/>}
+            {docs.filter(x=>x.item_id===currentDocument.id&&x.kind==='upload').map(doc=><p key={doc.id}><a href={`/api/portal/download?id=${doc.id}`}>{doc.name}</a> · {doc.state==='replace_requested'?'Replacement needed':'Uploaded'}</p>)}
+            {d.uploadsEnabled?upload(currentDocument.id):<p>Test uploads are temporarily closed. Your saved work is safe.</p>}
+            <div className="portal-actions"><button className="portal-secondary" onClick={()=>documentIndex>0?setDocumentIndex(documentIndex-1):void move(2)}>Back</button><button disabled={busy} onClick={()=>setDocumentIndex(documentIndex+1)}>{documentIndex===requirements.length-1?'Continue to final check':docs.some(x=>x.item_id===currentDocument.id&&x.state!=='replace_requested')?'Next document':'Complete later and continue'}</button></div>
+          </>:<><h3>Final check</h3><p>Uploaded {requirements.filter(x=>docs.some(doc=>doc.item_id===x.id&&doc.kind==='upload'&&doc.state!=='replace_requested')).length} of {requirements.length} checklist items. Conditional items may not apply.</p>{missing.length>0&&<><p>Still needed before sending:</p><ul>{missing.map(id=><li key={id}><button className="portal-secondary" onClick={()=>setDocumentIndex(requirements.findIndex(x=>x.id===id))}>{requirements.find(x=>x.id===id)!.title}</button></li>)}</ul></>}
+            <details><summary>Already prepared Form W-7? Add it here</summary><p>Optional. We still provide the full application service.</p>{docs.filter(x=>x.item_id==='completed-w7').map(doc=><p key={doc.id}><a href={`/api/portal/download?id=${doc.id}`}>{doc.name}</a></p>)}{d.uploadsEnabled&&upload('completed-w7')}</details>
+            <form onSubmit={e=>{e.preventDefault();void perform({action:'submit'});}}><label><input type="checkbox" required/> I have checked my information and uploads. I understand that final CAA review, original-document checks and handwritten W-7 signatures are still required.</label><div className="portal-actions"><button type="button" className="portal-secondary" onClick={()=>setDocumentIndex(requirements.length-1)}>Back</button><button disabled={busy||missing.length>0||!d.uploadsEnabled}>Send for CAA review</button></div></form>
+          </>}
+        </>}
+        {collected&&<div className="portal-actions"><button className="portal-secondary" onClick={()=>void backToCases()}>Back to my cases</button></div>}
+      </>}
+      {step>1&&!collected&&<details className="portal-no-print"><summary>Review an earlier step</summary><button className="portal-secondary" onClick={()=>void move(0)}>Signed engagement</button><button className="portal-secondary" onClick={()=>void move(1)}>Payment record</button>{step===3&&<button className="portal-secondary" onClick={()=>void move(2)}>Your details</button>}</details>}
+    </>}
+  </section>;
+}

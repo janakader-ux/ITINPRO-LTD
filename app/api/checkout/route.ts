@@ -17,8 +17,9 @@ export async function POST(request: Request) {
     const { category, price } = fixedServicePrice(token.category);
     const db = paymentDatabase(); const stripe = stripeClient();
     stage = 'enquiry';
-    const enquiry = await db.from('enquiries').select('id,email').eq('id', token.enquiryId).single();
+    const enquiry = await db.from('enquiries').select('id,email,intake').eq('id', token.enquiryId).single();
     if (enquiry.error) throw enquiry.error;
+    if(enquiry.data.intake?.flowVersion==='eligibility-v2')return NextResponse.json({error:'Sign in to your case and sign the engagement before requesting payment.'},{status:409});
     stage = 'order';
     const inserted = await db.from('payment_orders').upsert({ enquiry_id: token.enquiryId, kind: 'checkout',
       service_category: category.id, amount: category.amount, currency: 'gbp' }, { onConflict: 'enquiry_id', ignoreDuplicates: true });
