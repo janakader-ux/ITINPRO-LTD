@@ -1,3 +1,4 @@
+import { ensureDocumentIntake } from './document-intake-server';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { paymentDatabase } from '../payments';
@@ -32,6 +33,7 @@ export async function createReviewedCase(admin:ReturnType<typeof paymentDatabase
   const result=await admin.rpc('portal_create_engagement_case',{p_case:c,p_agreement:agreement.snapshot,p_hash:agreement.sha256,p_actor:actorId});
   if(result.error)throw new Error(/ENQUIRY_ALREADY_REVIEWED|ORDER_MISMATCH/.test(result.error.message)?'ENQUIRY_ALREADY_REVIEWED':'PORTAL_TEMPORARILY_UNAVAILABLE');
   const caseId=z.uuid().parse(result.data);
+  await ensureDocumentIntake(admin,{...c,id:caseId});
   const notification=await queuePortalNotice(caseId,`case-${caseId}`,'client').catch(()=>({pending:1,delivery:'unverified'}));
   return {caseId,notification};
 }

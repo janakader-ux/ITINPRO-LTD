@@ -66,3 +66,12 @@
 
 .engagement-brand{margin:0 0 1.5rem}.engagement-brand img{display:block;width:min(100%,400px);height:auto;border-radius:12px}
 @media print{.engagement-brand{break-inside:avoid;margin-bottom:16pt}.engagement-brand img{width:110mm;height:auto;print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+
+.portal-instructions{border:1px solid #cbd5e1;border-radius:14px;padding:20px;margin:20px 0;background:#f8fafc}
+.portal-instruction-steps{padding-left:24px;margin:0}
+.portal-instruction-steps>li{padding:12px 0;border-bottom:1px solid #e2e8f0}
+.portal-instruction-steps>li:last-child{border-bottom:0}
+.portal-instruction-steps>li>strong{font-size:1.1rem;color:#142d4e}
+.portal-instruction-text{white-space:pre-wrap;line-height:1.65}
+.portal-requirement-level{display:inline-block;border-radius:6px;padding:6px 10px;background:#eaf1f7;color:#142d4e;font-weight:600;font-size:.9rem}
+@media(max-width:600px){.portal-instructions{padding:14px}.portal-instruction-steps{padding-left:20px}}

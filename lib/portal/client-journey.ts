@@ -6,6 +6,6 @@ export function resumeClientStep(signed:boolean,paid:boolean,status:string,hasUp
   if(status==='awaiting_payment'&&!paid)return 3;
   return hasUploads||!['collecting','awaiting_payment'].includes(status)?2:1;
 }
-export function missingRequiredUploads(requirements:{id:string;conditional?:string}[],documents:{item_id:string;kind:string;state:string}[]){
-  return requirements.filter(r=>!r.conditional&&!documents.some(d=>d.item_id===r.id&&d.kind==='upload'&&d.state!=='replace_requested')).map(r=>r.id);
+export function missingRequiredUploads(requirements:{id:string;conditional?:string}[],documents:{item_id:string;kind:string;state:string}[],responses:Record<string,{status:string;note:string}>={}){
+  return requirements.filter(r=>(!r.conditional||responses[r.id]?.status==='later')&&!documents.some(d=>d.item_id===r.id&&d.kind==='upload'&&d.state!=='replace_requested')).map(r=>r.id);
 }
