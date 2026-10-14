@@ -1,3 +1,6 @@
+import { firptaInput,firptaPath } from '@/lib/portal/firpta';
+import { ensureDocumentIntake,saveDocumentIntake } from '@/lib/portal/document-intake-server';
+import { caseGuide,guidesForRoute,makeInstructionSnapshot,submissionDocumentBlockers } from '@/lib/portal/instructions';
 import { randomUUID,createHash } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
@@ -19,11 +22,12 @@ async function context(caseId?:string) {
   if(!portalEnabled())throw new Error('SANDBOX_ONLY');
   const session=await portalSession();
   const admin=paymentDatabase();
-  if(!caseId)return {...session,admin,c:null};
+  if(!caseId)return {...session,admin,c:null,instructions:null};
   const id=z.uuid().parse(caseId);
   const {data:c,error}=await session.db.from('portal_cases').select('*').eq('id',id).maybeSingle();
   if(error || !c)throw new Error('CASE_NOT_FOUND');
-  return {...session,admin,c};
+  const instructions=await ensureDocumentIntake(admin,c);
+  return {...session,admin,c,instructions};
 }
 async function audit(admin:ReturnType<typeof paymentDatabase>,caseId:string,actor:string,action:string,detail:Record<string,unknown>={}) {
   const r=await admin.from('portal_audit').insert({case_id:caseId,actor_id:actor,action,detail});if(r.error)throw r.error;
@@ -72,7 +76,8 @@ export async function GET(request:Request) {
     // account through the self-only account policy, so resolve its email server-side.
     const owner=await s.admin.from('portal_accounts').select('email').eq('user_id',s.c.owner_id).single();if(owner.error)throw owner.error;
     const payment=await s.admin.from('payment_orders').select('id,status,amount,currency,service_category,kind,paid_at').eq('id',s.c.payment_order_id).single();if(payment.error)throw payment.error;
-    return json({clientEmail:owner.data.email,case:s.c,role:s.account.role,staffMfa:s.staff,uploadsEnabled:uploadsEnabled(),payment:payment.data,paymentsEnabled:paymentConfigurationReady(),...value});
+    const versions=await s.db.from('portal_instruction_versions').select('id,version,category,created_at').eq('case_id',s.c.id).order('created_at',{ascending:false});if(versions.error)throw versions.error;
+    return json({documentIntake:s.instructions,instructionVersions:versions.data,clientEmail:owner.data.email,case:s.c,role:s.account.role,staffMfa:s.staff,uploadsEnabled:uploadsEnabled(),payment:payment.data,paymentsEnabled:paymentConfigurationReady(),...value});
   }catch(error){const code=safePortalError(error);return json({error:code},code==='SIGN_IN_REQUIRED'?401:code==='CASE_NOT_FOUND'?404:code==='STAFF_MFA_REQUIRED'?403:503);}
 }
 export async function POST(request:Request) {
@@ -93,7 +98,7 @@ export async function POST(request:Request) {
       if(!s.staff && (s.account.role!=='client' || s.user.id!==c.owner_id || kind!=='upload'))throw new Error('STAFF_MFA_REQUIRED');
       if(kind!=='upload')await canCollect(s.admin,c);
       if(kind!=='upload' && new Date(agreement.work_may_start_at).getTime()>Date.now())throw new Error('AGREEMENT_REQUIRED');
-      if(kind==='upload' && !routeChecklist(c.route_id).some(x=>x.id===item) && item!=='completed-w7'){
+      if(kind==='upload' && !s.instructions!.snapshot.requirements.some(x=>x.id===item) && item!=='completed-w7'){
         const requested=await s.db.from('portal_requests').select('id').eq('case_id',c.id).eq('item_id',item).eq('resolved',false).limit(1);
         if(requested.error || !requested.data?.length)throw new Error('INVALID_INPUT');
       }
@@ -151,6 +156,48 @@ export async function POST(request:Request) {
     }
     const s=await context(body.caseId),c=s.c!;
     if(s.account.role==='staff' && !s.staff)throw new Error('STAFF_MFA_REQUIRED');
+    if(['instruction-category','firpta-selection','document-status','review-applicability','revise-instructions'].includes(body.action)){
+      const i=s.instructions!;
+      if(z.number().int().nonnegative().parse(body.documentRevision)!==i.revision)return json({error:'Your document checklist changed in another tab. Refresh and try again.'},409);
+      const staffAction=['review-applicability','revise-instructions'].includes(body.action);
+      if(staffAction){if(!s.staff)throw new Error('STAFF_MFA_REQUIRED');if(body.action==='review-applicability'){const a=await canCollect(s.admin,c);if(new Date(a.work_may_start_at).getTime()>Date.now())throw new Error('AGREEMENT_REQUIRED');}}
+      else{if(s.user.id!==c.owner_id)throw new Error('INVALID_INPUT');await canIntake(s.admin,c);}
+      const value={category:i.category,firpta:i.firpta,responses:{...i.responses},applicability:{...i.applicability},revisionReason:''};
+      let snapshot=null;
+      if(body.action==='instruction-category'){
+        const code=z.string().min(2).max(3).parse(body.category);
+        if(!guidesForRoute(c.route_id).some(g=>g.code===code))throw new Error('INVALID_INPUT');
+        value.category=code;value.responses={};value.applicability={};
+        snapshot=makeInstructionSnapshot(c.route_id,code,i.firpta,c.workflow);
+      }else if(body.action==='firpta-selection'){
+        if(c.route_id!=='firpta')throw new Error('INVALID_INPUT');
+        const selected=firptaInput.safeParse(body.selection);
+        if(!selected.success)return json({error:selected.error.issues[0].message},400);
+        if(selected.data.transactionYear!==c.tax_year)return json({error:'The transaction year must match the year in your engagement. Ask your adviser to correct the engagement if needed.'},400);
+        value.firpta=selected.data;value.responses={};value.applicability={};
+        snapshot=makeInstructionSnapshot(c.route_id,i.category,selected.data,c.workflow);
+      }else if(body.action==='revise-instructions'){
+        value.revisionReason=z.string().trim().min(10).max(500).parse(body.reason);
+        if(body.selection!==undefined){if(c.route_id!=='firpta')throw new Error('INVALID_INPUT');const selected=firptaInput.parse(body.selection);if(selected.transactionYear!==c.tax_year)return json({error:'Correct the engagement tax year before revising the transaction year.'},400);value.firpta=selected;}
+        value.applicability={};snapshot=makeInstructionSnapshot(c.route_id,i.category,value.firpta,c.workflow);
+      }else{
+        const item=z.string().min(1).max(80).parse(body.itemId),requirement=i.snapshot.requirements.find(r=>r.id===item);
+        if(!requirement)throw new Error('INVALID_INPUT');
+        const note=z.string().trim().min(3).max(500).parse(body.note);
+        if(body.action==='review-applicability'){
+          const required=z.boolean().parse(body.required);
+          if(requirement.level==='mandatory'&&!required)return json({error:'A mandatory requirement cannot be waived here. Review and revise the application route if it is incorrect.'},400);
+          value.applicability[item]={required,note};
+        }else{
+          const status=z.enum(['later','not-applicable']).parse(body.status);
+          if(status==='not-applicable'&&(requirement.level==='mandatory'||i.applicability[item]?.required===true))return json({error:'This is mandatory. Choose provide later and explain what is missing.'},400);
+          value.responses[item]={status,note};
+        }
+      }
+      const revision=await saveDocumentIntake(s.admin,c,s.user.id,i,value,snapshot,body.action);
+      if(body.action==='revise-instructions')await queuePortalNotice(c.id,`instructions-${c.id}-${revision}`,'client').catch(()=>{});
+      return json({ok:true,revision});
+    }
     if(body.action==='invite'){
       if(!s.staff)throw new Error('STAFF_MFA_REQUIRED');
       const {data:a,error}=await s.admin.from('portal_accounts').select('email').eq('user_id',c.owner_id).single();if(error)throw error;
@@ -187,9 +234,11 @@ export async function POST(request:Request) {
     if(body.action==='submit'){
       if(s.user.id!==c.owner_id)throw new Error('INVALID_INPUT');await canUpload(s.admin,c);
       const answers=await s.admin.from('portal_answers').select('answers').eq('case_id',c.id).maybeSingle();if(answers.error)throw answers.error;
+      if(guidesForRoute(c.route_id).length>1&&!s.instructions!.snapshot.category)return json({error:'Choose your instruction category in Documents before continuing to payment.'},400);
+      if(c.route_id==='firpta'&&(!s.instructions!.firpta||s.instructions!.snapshot.firptaPath==='review-required'))return json({error:'Complete the FIRPTA questions and ask your adviser to confirm a qualifying transfer or withholding purpose before payment.'},400);
       if(c.workflow==='payment-last'){
         const files=await s.admin.from('portal_documents').select('item_id,kind,state').eq('case_id',c.id);if(files.error)throw files.error;
-        const missing=missingRequiredUploads(routeChecklist(c.route_id),files.data||[]);
+        const missing=missingRequiredUploads(s.instructions!.snapshot.requirements,files.data||[],s.instructions!.responses);
         if(!foreignAddressInput.safeParse(answers.data?.answers).success)missing.push('foreign-address');
         const prepared=await s.admin.rpc('portal_prepare_payment',{p_case:c.id,p_actor:s.user.id,p_missing:missing});if(prepared.error)throw prepared.error;
         let invoicePending=false;if(paymentConfigurationReady()){try{await issueCaseInvoice(s.admin,stripeClient(),c.id);}catch{invoicePending=true;}}
@@ -197,7 +246,7 @@ export async function POST(request:Request) {
       }
       if(!foreignAddressInput.safeParse(answers.data?.answers).success)return json({error:'Complete and save the mandatory foreign address and non-US country in Information before sending documents for review.'},400);
       const files=await s.admin.from('portal_documents').select('item_id,kind,state').eq('case_id',c.id);if(files.error)throw files.error;
-      const missing=missingRequiredUploads(routeChecklist(c.route_id),files.data||[]);if(missing.length)return json({error:'Upload the remaining required documents before sending for review.',missing},400);
+      const missing=missingRequiredUploads(s.instructions!.snapshot.requirements,files.data||[],s.instructions!.responses);if(missing.length)return json({error:'Upload the remaining required documents before sending for review.',missing},400);
       const r=await s.admin.from('portal_cases').update({status:'review'}).eq('id',c.id).in('status',['collecting','missing_information']);if(r.error)throw r.error;
       await audit(s.admin,c.id,s.user.id,'review_requested');
       const notification=await queuePortalNotice(c.id,`review-${c.id}-${c.status}`,'staff').catch(()=>({pending:1,delivery:'unverified'}));
@@ -221,8 +270,11 @@ export async function POST(request:Request) {
     if(body.action==='review-document'){
       const agreement=await canCollect(s.admin,c);
       if(new Date(agreement.work_may_start_at).getTime()>Date.now())throw new Error('AGREEMENT_REQUIRED');
-      const id=z.uuid().parse(body.documentId);const state=z.enum(['accepted','replace_requested']).parse(body.state);
-      const r=await s.admin.from('portal_documents').update({state}).eq('id',id).eq('case_id',c.id);if(r.error)throw r.error;await audit(s.admin,c.id,s.user.id,'document_reviewed',{document_id:id,state});return json({ok:true});
+      const id=z.uuid().parse(body.documentId),state=z.enum(['accepted','replace_requested']).parse(body.state);
+      const source=z.enum(['not-received','wet-original','issuer-original-reviewed']).parse(body.originalSource||'not-received');
+      const note=z.string().trim().min(3).max(1000).parse(body.note);
+      const reviewed=await s.admin.rpc('portal_review_document',{p_case:c.id,p_actor:s.user.id,p_document:id,p_state:state,p_original_source:source,p_note:note});if(reviewed.error)throw reviewed.error;
+      return json({ok:true});
     }
     // Draft release and submission gates need atomic transactions. Added RPC below.
     if(body.action==='release'){
@@ -237,7 +289,13 @@ export async function POST(request:Request) {
     if(body.action==='stage'){
       const stage=z.enum(['verification','submitted','complete']).parse(body.stage);
       if(stage==='submitted'){const answers=await s.admin.from('portal_answers').select('answers').eq('case_id',c.id).maybeSingle();if(answers.error)throw answers.error;if(!foreignAddressInput.safeParse(answers.data?.answers).success)return json({error:'Mandatory foreign-address information is missing. Request and review it before recording submission.'},400);}
-      const details=stage==='verification'?z.object({verifier:z.string().trim().min(2).max(100),route:z.enum(['in-person','video-with-original-in-hand','issuing-agency-certified-copy']),originalDocumentHeld:z.literal(true),interviewConducted:z.literal(true),originalW7Signature:z.literal(true)}).parse(body.details):stage==='submitted'?z.object({reference:z.string().trim().min(3).max(200)}).parse(body.details):{};
+      const details=stage==='verification'?z.object({verifier:z.string().trim().min(2).max(100),route:z.enum(['in-person','video-with-original-in-hand','issuing-agency-certified-copy']),originalDocumentHeld:z.literal(true),interviewConducted:z.literal(true),originalW7Signature:z.literal(true),originalSupportingDocuments:z.boolean().optional()}).parse(body.details):stage==='submitted'?z.object({reference:z.string().trim().min(3).max(200)}).parse(body.details):{};
+      if(stage==='verification'&&c.workflow==='payment-last'&&s.instructions!.snapshot.requirements.some(r=>r.original&&(r.level==='mandatory'||s.instructions!.applicability[r.id]?.required===true))&&!('originalSupportingDocuments' in details&&details.originalSupportingDocuments))return json({error:'Confirm that the required original signed supporting documents have been received and checked.'},400);
+      if(stage==='submitted'){
+        const uploaded=await s.admin.from('portal_documents').select('item_id,kind,state,original_checked').eq('case_id',c.id);if(uploaded.error)throw uploaded.error;
+        const missing=submissionDocumentBlockers(s.instructions!.snapshot.requirements,uploaded.data||[],s.instructions!.applicability);
+        if(missing.length)return json({error:'Complete staff document review, applicability decisions and required original checks before recording submission.',missing},400);
+      }
       const r=await s.admin.rpc('portal_record_stage',{p_case:c.id,p_actor:s.user.id,p_stage:stage,p_details:details});if(r.error)throw new Error('INVALID_INPUT');return json({ok:true,message:'Sandbox stage recorded. No application was submitted to the IRS.'});
     }
     return json({error:'Invalid action.'},400);
