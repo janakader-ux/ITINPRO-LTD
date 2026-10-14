@@ -6,11 +6,13 @@ import { basicServiceQuestions } from '@/lib/basic-service-questions';
 import { CheckCircle2 } from 'lucide-react';
 import { getItinCategory, formatItinFee } from '@/lib/itin-pricing';
 import { applicationRoutes, getApplicationRoute } from '@/lib/portal/checklists';
+import { enquiryServiceOptions, enquiryServiceSelection } from '@/lib/enquiry-service-links';
 import { taxReturnReasons } from '@/lib/service-intake';
 
 type Service = 'itin' | 'ein' | 'tax';
 const control='min-h-12 rounded-xl border border-white/20 bg-midnight px-4';
 export function LeadForm(){
+  const [linkedService,setLinkedService]=useState('');
   const [tab,setTab]=useState('services'),[service,setService]=useState<Service>('itin');
   const [formStage,setFormStage]=useState<'contact'|'basics'>('contact');
   const [basic,setBasic]=useState<Record<string,string>>({});
@@ -21,8 +23,9 @@ export function LeadForm(){
   const [error,setError]=useState(''),[notificationPending,setNotificationPending]=useState(false);
   const route=getApplicationRoute(routeId);
   const category=getItinCategory(service==='ein'?'ein':service==='tax'?'tax-return-quote':route?.priceCategory||'');
-  useEffect(()=>{const params=new URLSearchParams(window.location.search);setSandbox(params.get('sandbox')==='1');const requested=params.get('service');if(requested==='ein'||requested==='tax-return-quote'){setService(requested==='ein'?'ein':'tax');setStarted(true);}else if(requested){const r=applicationRoutes.find(x=>x.priceCategory===requested);if(r){setRouteId(r.id);setTab('application');setStarted(true);}}},[]);
-  function choose(next:Service){setFormStage('contact');if(next!==service)setBasic({});setService(next);setPreference('');setReady('');setStarted(true);setStatus('idle');setError('');}
+  function selectLinkedService(code:string){const selected=enquiryServiceSelection(code);if(!selected)return;setLinkedService(code==='tax-return-quote'?'taxreturn':code);setService(selected.service);setRouteId(selected.routeId);setTab(selected.tab);setPreference(selected.preference);setReady('');setBasic({});setFormStage('contact');setStarted(true);setStatus('idle');setError('');}
+  useEffect(()=>{const params=new URLSearchParams(window.location.search);setSandbox(params.get('sandbox')==='1');const requested=params.get('service');if(!requested)return;if(enquiryServiceSelection(requested)){selectLinkedService(requested);}else{const r=applicationRoutes.find(x=>x.priceCategory===requested);if(r){setRouteId(r.id);setTab('application');setStarted(true);}}},[]);
+  function choose(next:Service){setLinkedService('');setFormStage('contact');if(next!==service)setBasic({});setService(next);setPreference('');setReady('');setStarted(true);setStatus('idle');setError('');}
   function nextQuestions(button:HTMLButtonElement){const form=button.form;for(const input of form?.querySelectorAll<HTMLInputElement>('[data-contact] input')||[]){if(!input.reportValidity())return;}setFormStage('basics');}
   async function submit(e:FormEvent<HTMLFormElement>){
     e.preventDefault();if(formStage==='contact'){const button=e.currentTarget.querySelector<HTMLButtonElement>('[data-next]');if(button)nextQuestions(button);return;}setStatus('sending');setError('');
@@ -38,6 +41,7 @@ export function LeadForm(){
     {tab==='services'&&<div><h3 className="font-display text-2xl">You want to</h3><div className="mt-5 grid gap-4 sm:grid-cols-3">{([['itin','Apply for an ITIN'],['ein','Apply for an EIN'],['tax','U.S. tax return service']] as const).map(([id,label])=><article key={id} className="rounded-2xl border border-white/15 p-5"><h4 className="font-semibold">{label}</h4><p className="my-3 text-sm text-silver">{id==='itin'?'A personal tax identification number.':id==='ein'?'A separate application for your business.':'A short enquiry for our tax team.'}</p><button type="button" className="outline-button" onClick={()=>choose(id)} aria-label={`Click here: ${label}`}>Click Here</button></article>)}</div></div>}
     {tab==='application'&&<><h3 className="font-display text-2xl">ITIN Application</h3><p className="mt-3 text-silver">Select your situation below. We’ll guide you through the rest.</p></>}
     {(started&&tab!=='information')&&<div className="mt-7 grid gap-5">
+      {linkedService&&<label className="grid gap-2 font-semibold">Enquiry service<select className={control} value={linkedService} onChange={e=>selectLinkedService(e.target.value)}>{enquiryServiceOptions.map(([code,label])=><option key={code} value={code}>{label}</option>)}</select></label>}
       <label className="grid gap-2 font-semibold">You want to<select className={control} value={service} onChange={e=>choose(e.target.value as Service)}><option value="itin">ITIN Application</option><option value="ein">EIN Application</option><option value="tax">U.S. tax return service</option></select></label>
       {service==='itin'&&<label className="grid gap-2 font-semibold">Application category<select className={control} value={routeId} required onChange={e=>{setRouteId(e.target.value);setReady('');setStatus('idle');setError('');}}><option value="">Select your situation</option><option value="not-sure">Help me choose — I’m not sure</option>{applicationRoutes.map(r=><option key={r.id} value={r.id}>{r.title}</option>)}</select></label>}
       {service==='tax'&&<label className="grid gap-2 font-semibold">Why do you need a U.S. tax return?<select className={control} value={taxReason} required onChange={e=>setTaxReason(e.target.value)}><option value="">Select a reason</option>{taxReturnReasons.map(r=><option key={r}>{r}</option>)}</select></label>}

@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   // Public images already ship as compressed WebP/SVG. Avoid native image
   // transcoding at request time on the 512 MB Render instance.
   images: { unoptimized: true },
-  outputFileTracingIncludes: { '/api/portal/instructions': ['./docs/client-instructions/**/*.docx'] },
+  outputFileTracingIncludes: { '/llms.txt': ['./lib/blog-llms.txt'], '/api/portal/instructions': ['./docs/client-instructions/**/*.docx'] },
   async redirects() {
     return [
       { source: '/index.html', destination: '/', permanent: true },
