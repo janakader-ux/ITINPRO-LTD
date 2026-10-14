@@ -1,13 +1,11 @@
 import type { Metadata } from 'next';
-import { Inter, Playfair_Display } from 'next/font/google';
+import { inter, playfair } from '@/lib/site-fonts';
 import './globals.css';
 import { SiteHeader } from '@/components/SiteHeader';
 import { Footer } from '@/components/Footer';
 import { CookieBanner } from '@/components/CookieBanner';
 import { ConsentAnalytics } from '@/components/ConsentAnalytics';
 
-const inter=Inter({subsets:['latin'],variable:'--font-inter',display:'swap'});
-const playfair=Playfair_Display({subsets:['latin'],variable:'--font-playfair',display:'swap'});
 
 export const metadata:Metadata={
   metadataBase:new URL(process.env.NEXT_PUBLIC_SITE_URL||'https://itinpro.uk'),

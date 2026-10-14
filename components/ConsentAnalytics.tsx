@@ -14,7 +14,7 @@ function hasAnalyticsConsent() {
 
 export function ConsentAnalytics() {
   const pathname=usePathname();
-  const privatePortal=pathname.startsWith('/portal');
+  const privatePortal=pathname?.startsWith('/portal') ?? false;
   const measurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
   const [enabled, setEnabled] = useState(false);
   useEffect(() => {
