@@ -86,3 +86,12 @@
 .portal-document > * { min-width:0;max-width:100%; }
 @media(max-width:767px){.portal-fields,.portal-checklist{grid-template-columns:minmax(0,1fr)}.portal-panel button{min-height:48px}.portal-actions{align-items:stretch}}
 @media(max-width:479px){.portal-stepper{grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem .75rem}.portal-actions button{flex-basis:100%;margin-right:0}.portal-panel{padding:1rem}.portal-instructions{padding:1rem}}
+
+/* The light instruction card needs its own palette inside the dark portal. */
+.client-portal .portal-instructions { color:#24364b; }
+.client-portal .portal-instructions :is(p,li,label,small,.portal-instruction-text) { color:#24364b; }
+.client-portal .portal-instructions :is(h3,h4,strong,summary) { color:#142d4e; }
+.client-portal .portal-instructions a { color:#075985; }
+.client-portal .portal-instructions details { border-color:#cbd5e1; }
+.client-portal .portal-instructions select { background:#fff;color:#142d4e;border-color:#64748b;color-scheme:light; }
+.client-portal .portal-instructions :is(a,summary,select):focus-visible { outline:3px solid #075985;outline-offset:4px; }
