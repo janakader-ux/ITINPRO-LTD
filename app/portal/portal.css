@@ -75,3 +75,14 @@
 .portal-instruction-text{white-space:pre-wrap;line-height:1.65}
 .portal-requirement-level{display:inline-block;border-radius:6px;padding:6px 10px;background:#eaf1f7;color:#142d4e;font-weight:600;font-size:.9rem}
 @media(max-width:600px){.portal-instructions{padding:14px}.portal-instruction-steps{padding-left:20px}}
+
+/* Long options, document names and engagement tables must fit narrow screens. */
+.portal-wrap :where(.portal-panel,.portal-fields,.portal-checklist,label,form,fieldset) { min-width:0; }
+.portal-wrap :where(p,li,td,th,summary,label,button,a) { overflow-wrap:anywhere; }
+.portal-panel table { table-layout:fixed; }
+.portal-panel :where(td,th) { overflow-wrap:anywhere; }
+.portal-panel input[type=radio] { display:inline-block;width:1rem;height:1rem;padding:0;margin:.2rem .5rem 0 0;vertical-align:middle;accent-color:#e2b659; }
+.portal-panel :where(input,select,textarea) { min-width:0;max-width:100%;font-size:1rem; }
+.portal-document > * { min-width:0;max-width:100%; }
+@media(max-width:767px){.portal-fields,.portal-checklist{grid-template-columns:minmax(0,1fr)}.portal-panel button{min-height:48px}.portal-actions{align-items:stretch}}
+@media(max-width:479px){.portal-stepper{grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem .75rem}.portal-actions button{flex-basis:100%;margin-right:0}.portal-panel{padding:1rem}.portal-instructions{padding:1rem}}

@@ -1,19 +1,25 @@
 'use client';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Menu, X } from 'lucide-react';
 
+const links=[['Home','/'],['Services','/#services'],['ITIN Guides / FAQs','/guides'],['Blog','/blog'],['Client portal','/portal'],['Locations','/#locations']];
 export function SiteHeader() {
   const [open,setOpen]=useState(false);
-  return <header className="sticky top-0 z-50 border-b border-white/10 bg-midnight/85 backdrop-blur-xl">
-    <div className="container-premium flex min-h-20 items-center justify-between gap-3 xl:gap-6">
-      <Link href="/" aria-label="ITIN Pro home" className="shrink-0 py-3"><Image src="/itinpro-header-logo.svg" alt="ITIN PRO — Certified Acceptance Agents" width={960} height={360} className="h-auto w-[220px] rounded-lg sm:w-[280px]" priority /></Link>
-      <nav aria-label="Main navigation" className="hidden flex-wrap items-center justify-end gap-x-4 gap-y-2 py-3 text-sm font-semibold text-slate-200 lg:flex">
-        <Link href="/">Home</Link><Link href="/#services">Services</Link><Link href="/guides">ITIN Guides / FAQs</Link><Link href="/blog">Blog</Link><Link href="/portal">Client portal</Link><Link href="/#locations">Locations</Link><span className="flex flex-wrap items-center gap-3"><Link className="gold-button whitespace-nowrap" href="/#enquiry">Start your enquiry</Link><Link className="application-button whitespace-nowrap" href="/apply">Start application</Link></span>
-      </nav>
-      <button type="button" aria-expanded={open} aria-label="Open navigation" className="grid size-12 place-items-center rounded-full border border-white/15 lg:hidden" onClick={()=>setOpen(!open)}>{open?<X/>:<Menu/>}</button>
+  useEffect(()=>{
+    const wide=window.matchMedia('(min-width: 1440px)');
+    const close=()=>{if(wide.matches)setOpen(false);};
+    wide.addEventListener('change',close);
+    return ()=>wide.removeEventListener('change',close);
+  },[]);
+  return <header className="site-header sticky top-0 z-50 border-b border-white/10 bg-midnight/95 backdrop-blur-xl" onKeyDown={e=>{if(e.key==='Escape'){setOpen(false);document.getElementById('navigation-toggle')?.focus();}}}>
+    <div className="container-premium header-row">
+      <Link href="/" aria-label="ITIN Pro home" className="header-brand"><Image src="/itinpro-header-logo.svg" alt="ITIN PRO — Certified Acceptance Agents" width={960} height={360} className="h-auto w-full rounded-lg" priority /></Link>
+      <nav aria-label="Main navigation" className="desktop-navigation">{links.map(([label,href])=><Link key={label} href={href}>{label}</Link>)}</nav>
+      <div className="header-actions"><Link className="gold-button" href="/#enquiry" onClick={()=>setOpen(false)}>Start your enquiry</Link><Link className="application-button" href="/apply" onClick={()=>setOpen(false)}>Start application</Link></div>
+      <button id="navigation-toggle" type="button" aria-expanded={open} aria-controls="mobile-navigation" aria-label={open?'Close navigation':'Open navigation'} className="navigation-toggle" onClick={()=>setOpen(!open)}>{open?<X aria-hidden="true"/>:<Menu aria-hidden="true"/>}</button>
     </div>
-    {open&&<nav aria-label="Mobile navigation" className="container-premium grid gap-1 border-t border-white/10 py-4 text-base font-semibold lg:hidden">{[['Home','/'],['Services','/#services'],['ITIN Guides / FAQs','/guides'],['Blog','/blog'],['Client portal','/portal'],['Locations','/#locations'],['Start your enquiry','/#enquiry'],['Start application','/apply']].map(([label,href])=><Link key={label} href={href} onClick={()=>setOpen(false)} className={href==='/apply'?'application-button mt-2':'flex min-h-12 items-center rounded-xl px-3 hover:bg-white/5'}>{label}</Link>)}</nav>}
+    {open&&<nav id="mobile-navigation" aria-label="Mobile navigation" className="mobile-navigation container-premium">{links.map(([label,href])=><Link key={label} href={href} onClick={()=>setOpen(false)}>{label}</Link>)}</nav>}
   </header>;
 }
