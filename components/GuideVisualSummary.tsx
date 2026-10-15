@@ -22,8 +22,8 @@ const facts:Record<string,FactSet> = {
 export function GuideVisualSummary({slug}:{slug:string}) {
   const data=facts[slug]??{label:'ITIN route at a glance',items:['Correct Form W-7 reason','Current federal tax purpose','Permitted identity documents']} as FactSet;
   return <section aria-label={data.label} className="mx-auto -mt-7 max-w-5xl px-4 relative z-20">
-    <div className="visual-summary grid overflow-hidden rounded-3xl md:grid-cols-[1.15fr_2fr]">
-      <div className="flex items-center gap-4 border-b border-white/10 bg-gold/10 p-6 md:border-b-0 md:border-r">
+    <div className="visual-summary grid overflow-hidden rounded-3xl lg:grid-cols-[1.15fr_2fr]">
+      <div className="flex items-center gap-4 border-b border-white/10 bg-gold/10 p-6 lg:border-b-0 lg:border-r">
         <span className="inline-flex size-12 shrink-0 items-center justify-center rounded-2xl bg-gold text-midnight"><FileCheck2 aria-hidden="true"/></span>
         <p className="font-display text-xl text-white">{data.label}</p>
       </div>

@@ -20,7 +20,7 @@ export function AcceptableDocumentsTable() {
       <p className="eyebrow">IRS supporting-document matrix</p>
       <h2 id="accepted-documents-title" className="mt-3 font-display text-3xl">The 13 acceptable document types</h2>
       <p className="mt-4 max-w-3xl leading-7 text-silver">Documents must be valid originals or copies certified by the issuing agency. Without a passport, applicants generally need at least two current documents that together establish identity and foreign status.</p>
-      <div className="mt-7 overflow-x-auto rounded-2xl border border-white/10">
+      <p id="documents-table-help" className="mt-5 text-sm leading-6 text-silver sm:hidden">Swipe the table sideways to see all document requirements.</p><div role="region" aria-label="Acceptable identity documents" aria-describedby="documents-table-help" tabIndex={0} className="mt-7 max-w-full overflow-x-auto rounded-2xl border border-white/10">
         <table className="min-w-[760px] w-full border-collapse text-left text-sm">
           <thead className="bg-midnight text-white"><tr><th className="p-4">Document</th><th className="p-4">Foreign status</th><th className="p-4">Identity</th><th className="p-4">Important limit</th></tr></thead>
           <tbody>{documents.map(([name, foreignStatus, identity, note])=><tr key={name} className="border-t border-white/10 align-top"><th scope="row" className="p-4 font-semibold text-white">{name}</th><td className="p-4 text-slate-200">{foreignStatus}</td><td className="p-4 text-slate-200">{identity}</td><td className="p-4 leading-6 text-silver">{note}</td></tr>)}</tbody>
