@@ -11,14 +11,14 @@ import { taxReturnReasons } from '@/lib/service-intake';
 
 type Service = 'itin' | 'ein' | 'tax';
 const control='min-h-12 rounded-xl border border-white/20 bg-midnight px-4';
-export function LeadForm(){
+export function LeadForm({startApplication=false}:{startApplication?:boolean}={}){
   const [linkedService,setLinkedService]=useState('');
-  const [tab,setTab]=useState('services'),[service,setService]=useState<Service>('itin');
+  const [tab,setTab]=useState(startApplication?'application':'services'),[service,setService]=useState<Service>('itin');
   const [formStage,setFormStage]=useState<'contact'|'basics'>('contact');
   const [basic,setBasic]=useState<Record<string,string>>({});
   const [routeId,setRouteId]=useState(''),[taxReason,setTaxReason]=useState('');
-  const [preference,setPreference]=useState(''),[ready,setReady]=useState('');
-  const [started,setStarted]=useState(false),[status,setStatus]=useState('idle');
+  const [preference,setPreference]=useState(startApplication?'online':''),[ready,setReady]=useState('');
+  const [started,setStarted]=useState(startApplication),[status,setStatus]=useState('idle');
   const [sandbox,setSandbox]=useState(false),[journey,setJourney]=useState('assisted');
   const [error,setError]=useState(''),[notificationPending,setNotificationPending]=useState(false);
   const route=getApplicationRoute(routeId);
