@@ -93,16 +93,19 @@ export async function POST(request: Request) {
   // Accept saved enquiries even if staff email fails; do not invite duplicate submissions.
   console.info('itinpro_enquiry_saved', JSON.stringify({ requestId, enquiryId, notification }));
   let journey: 'assisted'|'self-service' = 'assisted';
+  let caseId:string|undefined;
   const automaticIntake=eligibility?.success?normalizeEligibilityIntake(eligibility.data).intake:undefined;
   if(automaticIntake?.testOnly&&portalEnabled()&&selfServiceReady(automaticIntake)){
     const onboarding=automaticIntake.onboarding!;
     try{
       const db=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
-      await createReviewedCase(db,null,{enquiryId,routeId:automaticIntake.applicationRoute,legalName:input.name,address:onboarding.address,taxYear:onboarding.taxYear,screening:{ssnIneligible:true,federalTaxPurpose:true,evidenceRoute:['prepared-1040nr','spouse','renewal'].includes(automaticIntake.applicationRoute)?'tax-return':'exception',evidenceNotes:'Client declarations passed automated onboarding screening; final CAA review remains required.',originalsExplained:true,feesExplained:true}});
+      const created=await createReviewedCase(db,null,{enquiryId,routeId:automaticIntake.applicationRoute,legalName:input.name,address:onboarding.address,taxYear:onboarding.taxYear,screening:{ssnIneligible:true,federalTaxPurpose:true,evidenceRoute:['prepared-1040nr','spouse','renewal'].includes(automaticIntake.applicationRoute)?'tax-return':'exception',evidenceNotes:'Client declarations passed automated onboarding screening; final CAA review remains required.',originalsExplained:true,feesExplained:true}});
+      caseId=created.caseId;
       journey='self-service';
     }catch(error){logFailure('automatic_engagement',requestId,error);}
   }
   const checkoutToken = !isSimple && category.amount !== null && paymentConfigurationReady()
     ? createCheckoutToken(enquiryId, category.id, process.env.PAYMENT_TOKEN_SECRET!) : undefined;
-  return NextResponse.json({ ok: true, enquiryId, notification, requestId, checkoutToken, journey }, { status: 201 });
+  return NextResponse.json({ ok: true, enquiryId, notification, requestId, checkoutToken, journey, caseId }, { status: 201 });
 }
+

@@ -95,7 +95,8 @@ test('Postgres enforces engagement before payment, intake before payment, retrie
 });
 
 test('ready onboarding requires a supported fixed fee, consistent screening and complete declarations',()=>{
-  const intake={flowVersion:'eligibility-v2',service:'itin',applicationRoute:'prepared-1040nr',preference:'online',readiness:'yes',testOnly:true,basic:{ssnEligibility:'No',previousItinApplication:'No',passportReady:'Yes',returnReady:'Yes'},onboarding:{address:'Synthetic address',taxYear:2026,documentsReady:true,taxPurposeUnderstood:true,originalsUnderstood:true}} as Parameters<typeof selfServiceReady>[0];
+  const intake={flowVersion:'eligibility-v2',service:'itin',applicationRoute:'prepared-1040nr',preference:'online',readiness:'yes',testOnly:true,eligibilityCheck:false,basic:{ssnEligibility:'No',previousItinApplication:'No',passportReady:'Yes',returnReady:'Yes'},onboarding:{address:'Synthetic address',taxYear:2026,documentsReady:true,taxPurposeUnderstood:true,originalsUnderstood:true}} as Parameters<typeof selfServiceReady>[0];
   assert.equal(selfServiceReady(intake),true);
   for(const change of [{applicationRoute:'not-sure'},{applicationRoute:'dependent'},{preference:'contact' as const},{readiness:'no' as const},{onboarding:undefined},{basic:{...intake.basic,ssnEligibility:'Not sure'}},{basic:{...intake.basic,previousItinApplication:'Yes'}}])assert.equal(selfServiceReady({...intake,...change}),false);
 });
+

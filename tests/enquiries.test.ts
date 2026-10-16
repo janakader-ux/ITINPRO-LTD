@@ -45,3 +45,42 @@ test('enquiry route validates inputs, distinguishes malformed config and does no
     for(const k of keys){if(before[k]===undefined)delete process.env[k];else process.env[k]=before[k];}
   }
 });
+
+
+test('ready sandbox applications return their created case; contact and review routes do not',async()=>{
+  const keys=['SUPABASE_URL','SUPABASE_SERVICE_ROLE_KEY','RESEND_API_KEY','PORTAL_MODE','PORTAL_TEST_CLIENT_EMAIL'];
+  const before=Object.fromEntries(keys.map(k=>[k,process.env[k]]));
+  const fetchBefore=globalThis.fetch,infoBefore=console.info,errorBefore=console.error;
+  const enquiryId='11111111-1111-4111-8111-111111111111',caseId='22222222-2222-4222-8222-222222222222',userId='33333333-3333-4333-8333-333333333333';
+  let saved:Record<string,any>={},creates=0;
+  const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json'}});
+  const raw={flowVersion:'eligibility-v2',service:'itin',firstName:'TEST',lastName:'Applicant',email:'test@example.com',phone:'+44 123456789',applicationRoute:'prepared-1040nr',preference:'online',readiness:'yes',consent:'yes',testOnly:true,
+    basic:{residenceCountry:'United Kingdom',citizenshipCountry:'United Kingdom',ssnEligibility:'No',previousItinApplication:'No',passportReady:'Yes',returnReady:'Yes',contactMethod:'Email'},
+    onboarding:{address:'Synthetic address only',taxYear:2026,documentsReady:true,taxPurposeUnderstood:true,originalsUnderstood:true}};
+  const send=(body:unknown)=>POST(new Request('https://itinpro.uk/api/enquiries',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}));
+  try{
+    process.env.SUPABASE_URL='https://test-only.supabase.co';process.env.SUPABASE_SERVICE_ROLE_KEY='TEST_ONLY';
+    process.env.PORTAL_MODE='sandbox';delete process.env.PORTAL_TEST_CLIENT_EMAIL;delete process.env.RESEND_API_KEY;
+    console.info=()=>{};console.error=()=>{};
+    globalThis.fetch=async(input,options)=>{
+      const url=String(input),method=options?.method||'GET';
+      if(url.includes('/rest/v1/enquiries')){if(method==='POST'){saved=JSON.parse(String(options?.body));return json({id:enquiryId},201);}return json({id:enquiryId,...saved});}
+      if(url.includes('/auth/v1/admin/generate_link'))return json({id:userId,email:'test@example.com'});
+      if(url.includes('/rest/v1/portal_accounts'))return method==='POST'?new Response(null,{status:201}):json({user_id:userId,email:'test@example.com',role:'client',active:true});
+      if(url.includes('/rpc/portal_create_engagement_case')){creates++;return json(caseId);}
+      if(url.includes('/rest/v1/portal_document_intake'))return json({instruction_version_id:enquiryId,revision:0});
+      if(url.includes('/rest/v1/portal_instruction_versions'))return json({snapshot:{requirements:[]}});
+      if(url.includes('/rest/v1/portal_notifications'))return new Response(null,{status:201});
+      throw new Error('Unexpected test network call');
+    };
+    const ready=await send(raw),result=await ready.json();
+    assert.equal(ready.status,201);assert.equal(result.journey,'self-service');assert.equal(result.caseId,caseId);assert.equal(creates,1);
+    const question=await send({...raw,preference:'contact',readiness:'no',eligibilityCheck:true});
+    const q=await question.json();assert.equal(q.journey,'assisted');assert.equal(q.caseId,undefined);assert.equal(creates,1);
+    const review=await send({...raw,basic:{...raw.basic,ssnEligibility:'Not sure'}});
+    const v=await review.json();assert.equal(v.journey,'assisted');assert.equal(v.caseId,undefined);assert.equal(creates,1);
+  }finally{
+    globalThis.fetch=fetchBefore;console.info=infoBefore;console.error=errorBefore;
+    for(const key of keys){if(before[key]===undefined)delete process.env[key];else process.env[key]=before[key];}
+  }
+});

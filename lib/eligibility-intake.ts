@@ -22,7 +22,7 @@ export const eligibilityIntakeSchema = z.object({
   applicationRoute:z.string().refine(v=>v==='not-sure'||!!getApplicationRoute(v)),
   preference:z.enum(['online','contact']),readiness:z.enum(['yes','no']).optional(),
   basic:z.record(z.string(),z.string().trim().max(1000)),consent:z.literal('yes'),website:z.string().max(0).optional(),
-  testOnly:z.boolean().optional(),
+  testOnly:z.boolean().optional(),eligibilityCheck:z.boolean().optional(),
   onboarding:z.object({address:z.string().trim().min(10).max(500),taxYear:z.number().int().min(2000).max(new Date().getUTCFullYear()+1),documentsReady:z.literal(true),taxPurposeUnderstood:z.literal(true),originalsUnderstood:z.literal(true)}).optional(),
 }).superRefine((v,ctx)=>{
   for(const q of eligibilityQuestions){const e=basicQuestionError(q,v.basic[q.id]);if(e)ctx.addIssue({code:'custom',path:['basic',q.id],message:e});}
@@ -36,9 +36,10 @@ export function normalizeEligibilityIntake(v:z.infer<typeof eligibilityIntakeSch
     reason:route?.title||'Help me choose an ITIN route',serviceCategory:category.id,
     location:basic.residenceCountry,appointment:'To be arranged',llcAndEinConfirmed:undefined,
     consent:v.consent,website:v.website,
-    intake:{flowVersion:v.flowVersion,service:'itin',applicationRoute:v.applicationRoute,preference:v.preference,readiness:v.readiness||'no',basic,testOnly:v.testOnly===true,onboarding:v.onboarding},
+    intake:{flowVersion:v.flowVersion,service:'itin',applicationRoute:v.applicationRoute,preference:v.preference,readiness:v.readiness||'no',basic,testOnly:v.testOnly===true,eligibilityCheck:v.preference==='contact'&&v.eligibilityCheck===true,onboarding:v.onboarding},
     message:[v.testOnly?'AUTOMATED TEST ONLY — synthetic enquiry':'Short ITIN eligibility enquiry',
       `Situation: ${route?.title||'Help me choose'}`,`Preference: ${v.preference}`,
+      ...(v.preference==='contact'&&v.eligibilityCheck?['Requested: please check ITIN eligibility and respond.']:[]),
       ...eligibilityQuestions.filter(q=>basic[q.id]).map(q=>`${q.label}: ${basic[q.id]}`),
       'Engagement must be signed before payment. Final CAA review and original-document verification are required before IRS submission.'].join('\n')};
 }
@@ -53,3 +54,4 @@ export function selfServiceReady(v:ReturnType<typeof normalizeEligibilityIntake>
     &&v.basic.returnReady===(returnRoute?'Yes':'Not needed / applying with supporting evidence')
     &&!!v.onboarding?.documentsReady&&!!v.onboarding.taxPurposeUnderstood&&!!v.onboarding.originalsUnderstood;
 }
+

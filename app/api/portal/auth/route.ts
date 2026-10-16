@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { portalClient, portalEnabled, portalSession, sendPortalLink,ensurePortalBucket } from '@/lib/portal/server';
 import { sameOrigin } from '@/lib/portal/validation';
-import { portalTokenHashPattern } from '@/lib/portal/login-link';
+import { portalTokenHashPattern, portalCaseId } from '@/lib/portal/login-link';
 export const runtime='nodejs';
 export async function POST(request:Request) {
   if(!portalEnabled()) return NextResponse.json({error:'Portal testing is not enabled.'},{status:503});
@@ -12,7 +12,7 @@ export async function POST(request:Request) {
   try{
     if(body.action==='link'){
       const email=z.email().max(254).parse(body.email).toLowerCase();
-      await sendPortalLink(email,true);
+      await sendPortalLink(email,true,portalCaseId(body.caseId)||undefined);
       return NextResponse.json({message:'If this email has portal access, a sign-in link has been sent. Check your inbox and spam folder.'});
     }
     const db=await portalClient();
@@ -52,3 +52,4 @@ export async function POST(request:Request) {
     return NextResponse.json({error:'Unable to complete sign-in. Please try again or contact ITIN PRO.'},{status:503});
   }
 }
+
