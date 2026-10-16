@@ -8,3 +8,8 @@ export function parsePortalLinkFragment(fragment: string) {
   if (!portalTokenHashPattern.test(tokenHash) || !['magiclink','signup','invite'].includes(tokenType)) return null;
   return { tokenHash, tokenType };
 }
+
+
+export function portalCaseId(value:unknown):string|null {
+  return typeof value==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)?value:null;
+}

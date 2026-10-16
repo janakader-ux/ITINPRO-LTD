@@ -20,7 +20,7 @@ export async function sendPendingNotices(caseId:string) {
       const to=item.recipient==='staff'?process.env.PORTAL_STAFF_EMAIL?.trim():owner.data.email;
       if(!to)continue;
       if(item.event_key===`case-${caseId}`&&item.recipient==='client'&&['engagement-first','payment-last'].includes(c.data.workflow)){
-        const sent=await sendPortalLink(to);if(!sent)continue;
+        const sent=await sendPortalLink(to,false,caseId);if(!sent)continue;
         const saved=await db.from('portal_notifications').update({state:'accepted',provider_email_id:sent.emailId}).eq('event_key',item.event_key).eq('state','pending');if(saved.error)continue;
         accepted++;continue;
       }
@@ -49,3 +49,4 @@ export async function repairAndRetryNotices(caseId:string) {
   const insert=await db.from('portal_notifications').upsert(entries,{onConflict:'event_key',ignoreDuplicates:true});if(insert.error)throw insert.error;
   return sendPendingNotices(caseId);
 }
+

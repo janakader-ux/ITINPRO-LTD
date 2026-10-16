@@ -1,3 +1,4 @@
+import { portalCaseId } from './login-link';
 import { portalOrigin } from './validation';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
@@ -30,7 +31,7 @@ export function safePortalError(error: unknown) {
   const code=(error as {message?:string})?.message || '';
   return ['DOCUMENT_VERSION_MISMATCH','SIGN_IN_REQUIRED','STAFF_MFA_REQUIRED','CASE_NOT_FOUND','CASE_ACCESS_DENIED','PAYMENT_REQUIRED','AGREEMENT_REQUIRED','UNKNOWN_APPLICATION_ROUTE','UPLOADS_DISABLED','FILE_SIZE','FILE_TYPE','INVALID_INPUT','AGREEMENT_VERSION_MISMATCH','ANSWERS_VERSION_MISMATCH','DRAFT_VERSION_MISMATCH','SANDBOX_ONLY','ENQUIRY_ALREADY_REVIEWED','TEST_CLIENT_NOT_READY'].includes(code) ? code : 'PORTAL_TEMPORARILY_UNAVAILABLE';
 }
-export async function sendPortalLink(email: string, bootstrapStaff=false) {
+export async function sendPortalLink(email: string, bootstrapStaff=false,caseId?:string) {
   const admin=paymentDatabase();
   const configuredStaff=(process.env.PORTAL_STAFF_EMAIL || '').trim().toLowerCase();
   const existing=await admin.from('portal_accounts').select('user_id,role,active').eq('email',email).maybeSingle();
@@ -57,7 +58,8 @@ export async function sendPortalLink(email: string, bootstrapStaff=false) {
   const tokenType=data.properties.verification_type;
   if(!['magiclink','signup','invite'].includes(tokenType))throw new Error('AUTH_LINK_FAILED');
   // URL fragments do not reach server access logs. Confirmation requires an explicit POST.
-  const link=`${origin}/portal/confirm#token_hash=${encodeURIComponent(data.properties.hashed_token)}&type=${tokenType}`;
+  const destination=portalCaseId(caseId)?`?case=${caseId}`:'';
+  const link=`${origin}/portal/confirm${destination}#token_hash=${encodeURIComponent(data.properties.hashed_token)}&type=${tokenType}`;
   const resend=new Resend(process.env.RESEND_API_KEY);
   const sent=await resend.emails.send({from:process.env.RESEND_FROM_EMAIL || 'ITIN PRO <enquiries@itinpro.uk>',to:email,
     subject:'ITIN PRO secure portal — sign in',text:`Use this single-use link to sign in to your ITIN PRO portal:\n${link}\n\nOpen the link and select Continue to sign in. If you did not request it, ignore this email. Do not forward this link. Never reply with passports or tax documents.`});
@@ -76,3 +78,4 @@ export async function ensurePortalBucket() {
   const checked=await admin.storage.getBucket(portalBucket);
   if(checked.error || !checked.data || checked.data.public) throw new Error('PRIVATE_BUCKET_REQUIRED');
 }
+

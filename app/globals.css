@@ -124,7 +124,8 @@ button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
   .blog-post h1 { font-size:clamp(2rem,8vw,2.6rem); }
   .guide-body h2 { font-size:1.6rem; line-height:1.25; }
   .eyebrow { line-height:1.7; letter-spacing:.12em; }
-  .cookie-preferences > div > div:last-child { display:grid; grid-template-columns:1fr 1fr; width:100%; }
-  .cookie-preferences button:first-child { grid-column:1/-1; }
+  .cookie-preferences .cookie-actions { display:grid; grid-template-columns:1fr; width:100%; }
+  .cookie-preferences .cookie-actions > button { width:100%; white-space:normal; }
   .cookie-preferences button { padding-inline:.65rem; font-size:.875rem; }
 }
+
