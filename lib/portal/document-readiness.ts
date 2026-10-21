@@ -1,0 +1,5 @@
+export const deferredDocumentsAcknowledgement='I understand that I must provide the outstanding information and documents later. I would like to proceed with payment now. Payment does not confirm eligibility or document approval, and ITIN PRO cannot submit my application until all required information, documents, original-document checks and signatures have been received and reviewed.';
+export function validDocumentDeferral(value:{documentsLater?:unknown;acknowledgement?:unknown}){return value.documentsLater!==true||value.acknowledgement===true;}
+export const basicIntakeFields=['firstName','middleName','lastName','dateOfBirth','citizenship','foreignCountry','foreignAddress','mailingAddressChoice','contactEmailChoice','contactEmail'] as const;
+export const finalIdentityFields=['firstName','lastName','dateOfBirth','birthCountry','citizenship','sex'] as const;
+export function missingFinalIdentity(answers:Record<string,unknown>={}){return finalIdentityFields.filter(key=>typeof answers[key]!=='string'||!(answers[key] as string).trim());}
