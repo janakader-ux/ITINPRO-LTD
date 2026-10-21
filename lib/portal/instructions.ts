@@ -4,7 +4,7 @@ import bank from './instruction-bank.json';
 import { commonDocuments,getApplicationRoute,routeChecklist,signatureInstructions,type Requirement } from './checklists';
 export const instructionVersion='2026-10-14.2';
 export type InstructionGuide=typeof bank[number];
-export type DocumentDisposition={status:'later'|'not-applicable';note:string};
+export type DocumentDisposition={status:import('./answer-support').DocumentStatus;note:string};
 export type InstructionScreening={instructionCategory?:string;documentResponses?:Record<string,DocumentDisposition>;firpta?:FirptaSelection};
 export type ApplicabilityDecision={required:boolean;note:string};
 export type InstructionSnapshot={version:string;routeId:string;routeTitle:string;category:string|null;guide:InstructionGuide|null;requirements:Requirement[];text:string;signatureInstructions:string;firpta:FirptaSelection|null;firptaPath:string|null;timing:string;returnFee:string;instructionFile:string|null;letterFile:string|null;instructionFileHash:string|null;letterFileHash:string|null};

@@ -95,3 +95,9 @@
 .client-portal .portal-instructions details { border-color:#cbd5e1; }
 .client-portal .portal-instructions select { background:#fff;color:#142d4e;border-color:#64748b;color-scheme:light; }
 .client-portal .portal-instructions :is(a,summary,select):focus-visible { outline:3px solid #075985;outline-offset:4px; }
+
+.portal-answer-field { min-width:0; padding-bottom:1rem; border-bottom:1px solid #45516b; }
+.portal-answer-support { font-size:.9rem; }
+.portal-follow-up { color:#fde68a!important; }
+.portal-document-status { margin-top:1.5rem; padding:1rem; border:1px solid #697890; border-radius:.75rem; }
+.client-portal .portal-requirement-level { background:#eaf1f7; color:#142d4e!important; }
