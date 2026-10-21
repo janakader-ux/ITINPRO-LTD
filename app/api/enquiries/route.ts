@@ -1,3 +1,4 @@
+import { reviewerEmail, submissionFields } from '@/lib/reviewer-email';
 import { simpleIntakeSchema, normalizeSimpleIntake } from '@/lib/service-intake';
 import { randomUUID } from 'node:crypto';
 import { NextResponse } from 'next/server';
@@ -84,7 +85,19 @@ export async function POST(request: Request) {
     const { data, error } = await resend.emails.send({
       from: process.env.RESEND_FROM_EMAIL?.trim() || 'enquiries@itinpro.uk', to, replyTo: input.email,
       subject: `${testPrefix}New ITIN Pro enquiry — ${reason}`,
-      text: `Reference: ${enquiryId}\nName: ${input.name}\nEmail: ${input.email}\nPhone: ${input.phone || 'Not provided'}\nLocation: ${input.location}\nAppointment: ${input.appointment || 'Not specified'}\nReason: ${reason}\n${serviceFeeScope(category.id)}\n${additionalChargesNotice}\n${category.id === 'other' ? otherCategoryNotice : ''}\n\n${input.message}`,
+      ...reviewerEmail('New ITIN PRO submission', [
+        {question:'Reference',answer:enquiryId},
+        {question:'Client name',answer:input.name},
+        {question:'Email address',answer:input.email},
+        {question:'Phone number',answer:input.phone || 'Not provided'},
+        {question:'Location',answer:input.location},
+        {question:'Appointment preference',answer:input.appointment || 'Not specified'},
+        {question:'Service and indicative fee',answer:reason},
+        ...submissionFields(input.message,isSimple),
+        {question:'Service scope',answer:serviceFeeScope(category.id)},
+        {question:'Additional charges',answer:additionalChargesNotice},
+        ...(category.id==='other'?[{question:'Adviser assessment required',answer:otherCategoryNotice,attention:true}]:[]),
+      ]),
     }, { idempotencyKey: `enquiry/${enquiryId}` });
     if (error) throw error;
     notification = 'sent';
