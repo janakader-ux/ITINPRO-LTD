@@ -21,7 +21,7 @@ test('enquiry route validates inputs, distinguishes malformed config and does no
         savedReason=JSON.parse(String(options?.body)).reason;savedMessage=JSON.parse(String(options?.body)).message;
         return new Response(JSON.stringify({id:'11111111-1111-4111-8111-111111111111'}),{status:201,headers:{'Content-Type':'application/json'}});
       }
-      if(url.startsWith('https://api.resend.com/'))return new Response(JSON.stringify({name:'validation_error',message:'API key is invalid'}),{status:400,headers:{'Content-Type':'application/json'}});
+      if(url.startsWith('https://api.resend.com/')){const email=JSON.parse(String(options?.body));assert.match(email.html,/<strong>Client name<\/strong>/);assert.match(email.text,/Client name\n/);return new Response(JSON.stringify({name:'validation_error',message:'API key is invalid'}),{status:400,headers:{'Content-Type':'application/json'}});}
       throw new Error('Unexpected network call in test');
     };
     const invalid=await POST(request({...payload,serviceCategory:'unknown'}));assert.equal(invalid.status,400);assert.equal(fetches,0);
