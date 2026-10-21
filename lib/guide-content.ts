@@ -1,3 +1,4 @@
+import { guideApplicationLink } from './guide-navigation';
 export type GuideFaq = { question: string; answer: string };
 
 const complianceFaq: GuideFaq = {
@@ -160,9 +161,10 @@ export function guideKeywords(slug: string, title: string) {
   return keywordMap[slug] ?? [title, 'ITIN application UK', 'Form W-7 UK', 'Certifying Acceptance Agent UK'];
 }
 
-export function normaliseGuideHtml(html: string) {
+export function normaliseGuideHtml(html: string, slug?: string) {
   return html
     .replaceAll('href="smart-itin-form.html"', 'href="/#enquiry"')
+    .replaceAll('href="/#enquiry"', `href="${slug ? guideApplicationLink(slug) : '/#enquiry'}"`)
     .replace(/href="([a-z0-9-]+)\.html"/g, 'href="/guides/$1"')
     .replace('A certifying acceptance agent can check your original and return it immediately.', 'At an in-person CAA appointment an eligible original can be returned after inspection. For a video interview, the CAA must first receive and possess the original or issuing-agency certified copy, then return it through the agreed secure route.')
     .replace('If you used a CAA, your originals are back with you the same day.', 'With a CAA, an eligible original can be returned at an in-person appointment or through the agreed secure-return service after a remote review. A CAA does not control IRS processing time.')
