@@ -1,3 +1,4 @@
+import { answersNeedingReview,documentResponse } from '@/lib/portal/answer-support';
 import { firptaInput,firptaPath } from '@/lib/portal/firpta';
 import { ensureDocumentIntake,saveDocumentIntake } from '@/lib/portal/document-intake-server';
 import { caseGuide,guidesForRoute,makeInstructionSnapshot,submissionDocumentBlockers } from '@/lib/portal/instructions';
@@ -183,15 +184,16 @@ export async function POST(request:Request) {
       }else{
         const item=z.string().min(1).max(80).parse(body.itemId),requirement=i.snapshot.requirements.find(r=>r.id===item);
         if(!requirement)throw new Error('INVALID_INPUT');
-        const note=z.string().trim().min(3).max(500).parse(body.note);
+        const note=z.string().trim().max(500).parse(body.note??'');
         if(body.action==='review-applicability'){
+          if(note.length<3)throw new Error('INVALID_INPUT');
           const required=z.boolean().parse(body.required);
           if(requirement.level==='mandatory'&&!required)return json({error:'A mandatory requirement cannot be waived here. Review and revise the application route if it is incorrect.'},400);
           value.applicability[item]={required,note};
         }else{
-          const status=z.enum(['later','not-applicable']).parse(body.status);
-          if(status==='not-applicable'&&(requirement.level==='mandatory'||i.applicability[item]?.required===true))return json({error:'This is mandatory. Choose provide later and explain what is missing.'},400);
-          value.responses[item]={status,note};
+          const status=z.enum(['later','not-applicable','not-sure','staff-review']).parse(body.status);
+          // A client response records uncertainty; only the CAA determines applicability.
+          value.responses[item]=documentResponse(status,note);
         }
       }
       const revision=await saveDocumentIntake(s.admin,c,s.user.id,i,value,snapshot,body.action);
@@ -240,6 +242,7 @@ export async function POST(request:Request) {
         const files=await s.admin.from('portal_documents').select('item_id,kind,state').eq('case_id',c.id);if(files.error)throw files.error;
         const missing=missingRequiredUploads(s.instructions!.snapshot.requirements,files.data||[],s.instructions!.responses);
         if(!foreignAddressInput.safeParse(answers.data?.answers).success)missing.push('foreign-address');
+        missing.push(...answersNeedingReview(answers.data?.answers).map(key=>`answer:${key}`));
         const prepared=await s.admin.rpc('portal_prepare_payment',{p_case:c.id,p_actor:s.user.id,p_missing:missing});if(prepared.error)throw prepared.error;
         let invoicePending=false;if(paymentConfigurationReady()){try{await issueCaseInvoice(s.admin,stripeClient(),c.id);}catch{invoicePending=true;}}
         return json({ok:true,invoicePending,missing});
@@ -288,7 +291,7 @@ export async function POST(request:Request) {
     if(body.action==='retry-notices'){return json({ok:true,notification:await repairAndRetryNotices(c.id)});}
     if(body.action==='stage'){
       const stage=z.enum(['verification','submitted','complete']).parse(body.stage);
-      if(stage==='submitted'){const answers=await s.admin.from('portal_answers').select('answers').eq('case_id',c.id).maybeSingle();if(answers.error)throw answers.error;if(!foreignAddressInput.safeParse(answers.data?.answers).success)return json({error:'Mandatory foreign-address information is missing. Request and review it before recording submission.'},400);}
+      if(stage==='submitted'){const answers=await s.admin.from('portal_answers').select('answers').eq('case_id',c.id).maybeSingle();if(answers.error)throw answers.error;if(!foreignAddressInput.safeParse(answers.data?.answers).success)return json({error:'Mandatory foreign-address information is missing. Request and review it before recording submission.'},400);if(answersNeedingReview(answers.data?.answers).length)return json({error:'Resolve the client information marked for staff review before recording submission.'},400);}
       const details=stage==='verification'?z.object({verifier:z.string().trim().min(2).max(100),route:z.enum(['in-person','video-with-original-in-hand','issuing-agency-certified-copy']),originalDocumentHeld:z.literal(true),interviewConducted:z.literal(true),originalW7Signature:z.literal(true),originalSupportingDocuments:z.boolean().optional()}).parse(body.details):stage==='submitted'?z.object({reference:z.string().trim().min(3).max(200)}).parse(body.details):{};
       if(stage==='verification'&&c.workflow==='payment-last'&&s.instructions!.snapshot.requirements.some(r=>r.original&&(r.level==='mandatory'||s.instructions!.applicability[r.id]?.required===true))&&!('originalSupportingDocuments' in details&&details.originalSupportingDocuments))return json({error:'Confirm that the required original signed supporting documents have been received and checked.'},400);
       if(stage==='submitted'){
