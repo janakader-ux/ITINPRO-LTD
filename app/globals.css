@@ -129,3 +129,7 @@ button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
   .cookie-preferences button { padding-inline:.65rem; font-size:.875rem; }
 }
 
+
+.guide-route-image { cursor:pointer; }
+.guide-route-image:focus-visible { outline:3px solid #fff; outline-offset:6px; }
+#route-details, #irs-verification { scroll-margin-top:12rem; }

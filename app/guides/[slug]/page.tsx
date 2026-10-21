@@ -8,6 +8,7 @@ import { categoryForGuide, getItinCategory, formatItinFee, itinFeeScope, additio
 import { guideFaqs, guideKeywords, normaliseGuideHtml } from '@/lib/guide-content';
 import { GeoFAQAccordion } from '@/components/GeoFAQAccordion';
 import { AcceptableDocumentsTable } from '@/components/AcceptableDocumentsTable';
+import { guideApplicationLink } from '@/lib/guide-navigation';
 import { GuideVisualSummary } from '@/components/GuideVisualSummary';
 
 export function generateStaticParams() {
@@ -65,9 +66,10 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
 
       <header className="container-premium pt-10 sm:pt-14">
         <Link href="/guides" className="eyebrow">ITIN Guides / FAQs</Link>
-        <div className="relative mt-7 aspect-[3/2] overflow-hidden rounded-3xl border border-white/10 shadow-2xl">
+        <Link href="#route-details" aria-label={`Check this route: ${guide.title}`} className="guide-route-image relative mt-7 block aspect-[3/2] overflow-hidden rounded-3xl border border-white/10 shadow-2xl">
           <Image src={image} alt={`${guide.title} — ITIN Pro UK guide`} fill priority sizes="(max-width: 1280px) 100vw, 1200px" className="object-cover" />
-        </div>
+        </Link>
+        <p className="mt-3 text-center"><Link href="#route-details" className="outline-button">Check this route and required information →</Link></p>
         <div className="mx-auto max-w-4xl py-10 text-center">
           <p className="text-sm font-bold text-gold">{guide.category}</p>
           <h1 className="mt-3 font-display text-4xl leading-tight sm:text-6xl">{guide.title}</h1>
@@ -77,7 +79,8 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
 
       <GuideVisualSummary slug={guide.slug} />
       <div className="container-premium">
-        <div className="guide-body mx-auto max-w-3xl py-14" dangerouslySetInnerHTML={{ __html: normaliseGuideHtml(guide.body) }} />
+        <section id="route-details" tabIndex={-1} aria-label="Route information and next steps" className="pt-8"><div className="mx-auto max-w-3xl rounded-3xl border border-emerald/30 bg-emerald/10 p-6"><h2 className="text-2xl font-bold">Your next step</h2><p className="mt-3 leading-7 text-slate-200">Read the route information below, then tell us about your situation. We will confirm eligibility, the supporting documents and the agreed fee before your application proceeds.</p><Link href={guideApplicationLink(guide.slug)} className="gold-button mt-5">Continue with this route →</Link></div></section>
+        <div className="guide-body mx-auto max-w-3xl py-14" dangerouslySetInnerHTML={{ __html: normaliseGuideHtml(guide.body, guide.slug) }} />
         <aside className="mx-auto max-w-3xl rounded-3xl border border-emerald/30 bg-emerald/10 p-6">
           <p className="font-bold text-white">Remote CAA document rule</p>
           <p className="mt-2 leading-7 text-slate-200">A video interview may be used, but the CAA must have the original identification document or an issuing-agency certified copy in their possession during the interview. Remote applicants can use an agreed secure delivery and return process.</p>
@@ -85,7 +88,7 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
       </div>
       {guide.slug === 'itin-acceptable-documents-passport' && <AcceptableDocumentsTable />}
       <GeoFAQAccordion items={articleFaqs} />
-      {feeCategory && <aside className="container-premium py-8"><div className="mx-auto max-w-3xl rounded-3xl border border-gold/30 p-6"><h2 className="text-xl font-bold">ITIN service fee</h2><p className="mt-3 text-gold">{formatItinFee(feeCategory.amount)}</p><p className="mt-3 leading-7 text-silver">{itinFeeScope}</p><p className="mt-3 leading-7 text-silver">{additionalChargesNotice}</p>{feeCategory.id === 'other' && <p className="mt-3 leading-7 text-silver">{otherCategoryNotice}</p>}{feeCategory.id === 'llc-bank-account' && <p className="mt-3 leading-7 text-silver">This category is for LLC owners with a US bank account. You must already have an LLC and its EIN number.</p>}{feeCategory.id === 'prepared-1040nr' && <p className="mt-3 leading-7 text-silver">The £395 fee applies only when your 1040-NR tax return is already prepared.</p>}<Link className="gold-button mt-5" href={`/?service=${feeCategory.id}#enquiry`}>Enquire about this service</Link></div></aside>}
+      {feeCategory && <aside className="container-premium py-8"><div className="mx-auto max-w-3xl rounded-3xl border border-gold/30 p-6"><h2 className="text-xl font-bold">ITIN service fee</h2><p className="mt-3 text-gold">{formatItinFee(feeCategory.amount)}</p><p className="mt-3 leading-7 text-silver">{itinFeeScope}</p><p className="mt-3 leading-7 text-silver">{additionalChargesNotice}</p>{feeCategory.id === 'other' && <p className="mt-3 leading-7 text-silver">{otherCategoryNotice}</p>}{feeCategory.id === 'llc-bank-account' && <p className="mt-3 leading-7 text-silver">This category is for LLC owners with a US bank account. You must already have an LLC and its EIN number.</p>}{feeCategory.id === 'prepared-1040nr' && <p className="mt-3 leading-7 text-silver">The £395 fee applies only when your 1040-NR tax return is already prepared.</p>}<Link className="gold-button mt-5" href={guideApplicationLink(guide.slug)}>Continue with this route</Link></div></aside>}
       <div className="container-premium">
         <div className="mx-auto max-w-3xl border-t border-white/10 pt-8 text-sm leading-6 text-silver">General information only. Rules and forms change. ITIN Pro is independent and is not the IRS. The IRS decides whether to issue an ITIN. <Link className="text-gold underline" href="/#enquiry">Discuss your facts with us.</Link></div>
       </div>
