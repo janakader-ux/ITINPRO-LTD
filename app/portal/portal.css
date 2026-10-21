@@ -101,3 +101,8 @@
 .portal-follow-up { color:#fde68a!important; }
 .portal-document-status { margin-top:1.5rem; padding:1rem; border:1px solid #697890; border-radius:.75rem; }
 .client-portal .portal-requirement-level { background:#eaf1f7; color:#142d4e!important; }
+
+.portal-readiness { padding:1.25rem; margin-top:1.5rem; border:2px solid #c9a94e; border-radius:1rem; }
+.portal-readiness-choice { display:flex!important; align-items:flex-start; gap:.75rem; padding:1rem; margin:1rem 0; border:1px solid #697890; border-radius:.75rem; cursor:pointer; }
+.portal-readiness-choice:has(input:checked) { border-color:#e2b659; background:#1c2940; }
+.portal-defer-notice { padding:1rem; border-left:4px solid #e2b659; background:#1c2940; }

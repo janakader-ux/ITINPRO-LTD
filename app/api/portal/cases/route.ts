@@ -1,3 +1,4 @@
+import { deferredDocumentsAcknowledgement,validDocumentDeferral,missingFinalIdentity } from '@/lib/portal/document-readiness';
 import { answersNeedingReview,documentResponse } from '@/lib/portal/answer-support';
 import { firptaInput,firptaPath } from '@/lib/portal/firpta';
 import { ensureDocumentIntake,saveDocumentIntake } from '@/lib/portal/document-intake-server';
@@ -234,6 +235,7 @@ export async function POST(request:Request) {
       return json({ok:true,invoiceId:invoice.invoiceId,notification:invoice.notification});
     }
     if(body.action==='submit'){
+      if(!validDocumentDeferral(body))return json({error:'Confirm that you will provide the outstanding information and documents before application submission.'},400);
       if(s.user.id!==c.owner_id)throw new Error('INVALID_INPUT');await canUpload(s.admin,c);
       const answers=await s.admin.from('portal_answers').select('answers').eq('case_id',c.id).maybeSingle();if(answers.error)throw answers.error;
       if(guidesForRoute(c.route_id).length>1&&!s.instructions!.snapshot.category)return json({error:'Choose your instruction category in Documents before continuing to payment.'},400);
@@ -242,7 +244,10 @@ export async function POST(request:Request) {
         const files=await s.admin.from('portal_documents').select('item_id,kind,state').eq('case_id',c.id);if(files.error)throw files.error;
         const missing=missingRequiredUploads(s.instructions!.snapshot.requirements,files.data||[],s.instructions!.responses);
         if(!foreignAddressInput.safeParse(answers.data?.answers).success)missing.push('foreign-address');
+        missing.push(...missingFinalIdentity(answers.data?.answers).map(key=>`answer:${key}`));
         missing.push(...answersNeedingReview(answers.data?.answers).map(key=>`answer:${key}`));
+        if(missing.length>0&&(body.documentsLater!==true||body.acknowledgement!==true))return json({error:'Some information or documents are outstanding. Confirm that you will provide them later and still wish to pay now.'},400);
+        if(body.documentsLater===true)await audit(s.admin,c.id,s.user.id,'document_collection_deferred',{acknowledgement:deferredDocumentsAcknowledgement,instructionRevision:s.instructions!.revision,missing});
         const prepared=await s.admin.rpc('portal_prepare_payment',{p_case:c.id,p_actor:s.user.id,p_missing:missing});if(prepared.error)throw prepared.error;
         let invoicePending=false;if(paymentConfigurationReady()){try{await issueCaseInvoice(s.admin,stripeClient(),c.id);}catch{invoicePending=true;}}
         return json({ok:true,invoicePending,missing});
@@ -291,7 +296,7 @@ export async function POST(request:Request) {
     if(body.action==='retry-notices'){return json({ok:true,notification:await repairAndRetryNotices(c.id)});}
     if(body.action==='stage'){
       const stage=z.enum(['verification','submitted','complete']).parse(body.stage);
-      if(stage==='submitted'){const answers=await s.admin.from('portal_answers').select('answers').eq('case_id',c.id).maybeSingle();if(answers.error)throw answers.error;if(!foreignAddressInput.safeParse(answers.data?.answers).success)return json({error:'Mandatory foreign-address information is missing. Request and review it before recording submission.'},400);if(answersNeedingReview(answers.data?.answers).length)return json({error:'Resolve the client information marked for staff review before recording submission.'},400);}
+      if(stage==='submitted'){const answers=await s.admin.from('portal_answers').select('answers').eq('case_id',c.id).maybeSingle();if(answers.error)throw answers.error;if(!foreignAddressInput.safeParse(answers.data?.answers).success)return json({error:'Mandatory foreign-address information is missing. Request and review it before recording submission.'},400);if(missingFinalIdentity(answers.data?.answers).length)return json({error:'Complete the applicant identity details before recording submission.'},400);if(answersNeedingReview(answers.data?.answers).length)return json({error:'Resolve the client information marked for staff review before recording submission.'},400);}
       const details=stage==='verification'?z.object({verifier:z.string().trim().min(2).max(100),route:z.enum(['in-person','video-with-original-in-hand','issuing-agency-certified-copy']),originalDocumentHeld:z.literal(true),interviewConducted:z.literal(true),originalW7Signature:z.literal(true),originalSupportingDocuments:z.boolean().optional()}).parse(body.details):stage==='submitted'?z.object({reference:z.string().trim().min(3).max(200)}).parse(body.details):{};
       if(stage==='verification'&&c.workflow==='payment-last'&&s.instructions!.snapshot.requirements.some(r=>r.original&&(r.level==='mandatory'||s.instructions!.applicability[r.id]?.required===true))&&!('originalSupportingDocuments' in details&&details.originalSupportingDocuments))return json({error:'Confirm that the required original signed supporting documents have been received and checked.'},400);
       if(stage==='submitted'){
