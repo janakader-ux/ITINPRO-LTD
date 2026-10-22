@@ -9,7 +9,7 @@ export function QuestionnaireFields({fields,answers,clientEmail,readOnly,allowIn
         const emailChoice=answers.contactEmailChoice||'Use my portal email';
         const sameAddress=mailingChoice==='Same as foreign address'&&['mailingAddress','mailingCountry'].includes(x);
         const portalContact=x==='contactEmail'&&emailChoice==='Use my portal email';
-        const supportStatus=answerSupportStatus(saved);
+        const supportStatus=x==='mailingAddress'?answerSupportStatus(saved):'';
         const disabled=readOnly||sameAddress||portalContact||!!supportStatus;
         const mirrored=sameAddress?(x==='mailingCountry'?(answers.foreignCountry||''):(answers.foreignAddress||'')):portalContact?clientEmail:saved;
         const value=x==='mailingAddressChoice'?mailingChoice:x==='contactEmailChoice'?emailChoice:mirrored;
@@ -24,7 +24,8 @@ export function QuestionnaireFields({fields,answers,clientEmail,readOnly,allowIn
           {portalContact&&<small>{clientEmail} — your sign-in email stays the same.</small>}
           {x==='contactEmail'&&emailChoice==='Use another contact email'&&<small>This contact address is for staff review. Portal sign-in continues to use {clientEmail}.</small>}
         </label>
-        <label className="portal-answer-support">Need help with this answer?<select aria-label={`Help with ${labels[x]||x.replace(/([A-Z])/g,' $1').toLowerCase()}`} value={supportStatus} disabled={readOnly||sameAddress||portalContact} onChange={e=>change(answerSupportOptions.find(option=>option.value===e.target.value)?.answer||'')}><option value="">Enter / use my answer</option>{answerSupportOptions.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+        {x==='foreignAddress'&&<p className="portal-foreign-address-note" role="note"><strong>Required for your ITIN application:</strong> we need at least one complete address outside the United States. If you cannot provide a non-US address, we cannot submit your application.</p>}
+        {x==='mailingAddress'&&!sameAddress&&<label className="portal-answer-support">Need help with your mailing address?<select aria-label="Help with mailing address" value={supportStatus} disabled={readOnly} onChange={e=>change(answerSupportOptions.find(option=>option.value===e.target.value)?.answer||'')}><option value="">Enter / use my answer</option>{answerSupportOptions.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</select></label>}
         {!!supportStatus&&<p className="portal-follow-up">Saved for staff review. You can save and continue.</p>}
         </div>;
       })}</div>;}

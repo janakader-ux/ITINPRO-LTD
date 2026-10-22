@@ -23,6 +23,8 @@
 .portal-checklist article { border-top:1px solid #697890;padding-top:1rem; }
 .portal-fields { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 1.5rem; }
 .portal-message { border:1px solid #697890;padding:1rem;margin:1rem 0;border-radius:.5rem; }
+.portal-transition { border-color:#dfbe64;background:#1c2541; }
+.portal-foreign-address-note { padding:.75rem 1rem;margin:.5rem 0 1rem;border-left:3px solid #dfbe64;border-radius:.35rem;background:#1c2541;font-size:.95rem;line-height:1.5; }
 .portal-cases { display:grid;gap:1rem; }
 .portal-panel .portal-case-button { text-align:left;padding:1rem;background:#1c2541;color:#fff;border-color:#697890; }
 .portal-case-button span { display:block;margin-top:.4rem; }

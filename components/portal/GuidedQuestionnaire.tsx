@@ -2,9 +2,14 @@
 import { useEffect,useRef,useState } from 'react';
 import type { QuestionnaireField } from '@/lib/portal/questionnaire';
 import { basicIntakeFields } from '@/lib/portal/document-readiness';
+import { answerSupportStatus } from '@/lib/portal/answer-support';
 import { QuestionnaireFields } from './QuestionnaireFields';
 import { foreignCountryOptions } from '@/lib/portal/questionnaire';
 import { portalPost } from './PortalApp';
+function removeUnsupportedHelpAnswers(answers:Record<string,string>,readOnly:boolean){
+  if(readOnly)return answers;
+  return Object.fromEntries(Object.entries(answers).filter(([field,value])=>field==='mailingAddress'||!answerSupportStatus(value)));
+}
 const sections=[
   {title:'About you',fields:['firstName','middleName','lastName','birthName','dateOfBirth','sex','birthCountry','birthCity','citizenship']},
   {title:'Addresses and contact',fields:['foreignAddressStatus','foreignCountry','foreignAddress','mailingAddressChoice','mailingCountry','mailingAddress','contactEmailChoice','contactEmail']},
@@ -15,10 +20,11 @@ const sections=[
 export function GuidedQuestionnaire({caseId,fields,initialAnswers,initialRevision,clientEmail,readOnly,allowIncomplete=false,onDocuments,onRegisterSave,onBack}:{caseId:string;fields:QuestionnaireField[];initialAnswers:Record<string,string>;initialRevision:number;clientEmail:string;readOnly:boolean;allowIncomplete?:boolean;onDocuments:(answers:Record<string,string>)=>void;onBack?:()=>void;onRegisterSave?:(save:(()=>Promise<void>)|null)=>void}){
   const minimal=allowIncomplete&&!readOnly;
   const activeSections=minimal?[{title:'Basic details',fields:[...basicIntakeFields] as string[]}]:sections;
-  const [answers,setAnswers]=useState(initialAnswers),[step,setStep]=useState(()=>{const raw=typeof window==='undefined'?null:new URLSearchParams(window.location.search).get('part');const n=Number(raw);return raw!==null&&Number.isInteger(n)&&n>=0&&n<activeSections.length?n:0;}),[saveStatus,setSaveStatus]=useState('Saved'),[saving,setSaving]=useState(false);
+  const cleanedInitial=useRef(removeUnsupportedHelpAnswers(initialAnswers,readOnly)).current;
+  const [answers,setAnswers]=useState(cleanedInitial),[step,setStep]=useState(()=>{const raw=typeof window==='undefined'?null:new URLSearchParams(window.location.search).get('part');const n=Number(raw);return raw!==null&&Number.isInteger(n)&&n>=0&&n<activeSections.length?n:0;}),[saveStatus,setSaveStatus]=useState('Saved'),[saving,setSaving]=useState(false);
   const sectionHeading=useRef<HTMLHeadingElement>(null);
   useEffect(()=>{sectionHeading.current?.focus({preventScroll:true});sectionHeading.current?.scrollIntoView({block:'start'});},[step]);
-  const latest=useRef(initialAnswers),saved=useRef(JSON.stringify(initialAnswers)),revision=useRef(initialRevision),queue=useRef<Promise<void>>(Promise.resolve()),conflict=useRef(false),mounted=useRef(true);
+  const latest=useRef(cleanedInitial),saved=useRef(JSON.stringify(initialAnswers)),revision=useRef(initialRevision),queue=useRef<Promise<void>>(Promise.resolve()),conflict=useRef(false),mounted=useRef(true);
   useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
   async function save(){
     if(readOnly)return;
@@ -37,10 +43,10 @@ export function GuidedQuestionnaire({caseId,fields,initialAnswers,initialRevisio
   useEffect(()=>{if(readOnly||JSON.stringify(answers)===saved.current)return;const timer=setTimeout(()=>void save().catch(e=>{if(mounted.current)setSaveStatus(`Not saved: ${e.message}`);}),1200);return()=>clearTimeout(timer);},[answers,readOnly]);
   async function move(next:number){if(!readOnly){try{await save();}catch(e){setSaveStatus(`Not saved: ${(e as Error).message}`);return;}}setStep(next);if(!readOnly){const url=new URL(window.location.href);url.searchParams.set('part',String(next));window.history.replaceState(null,'',url);}}
   const section=activeSections[step],visible=fields.filter(f=>section.fields.includes(f));
-  return <div><p>Part {step+1} of {activeSections.length}</p><h3 ref={sectionHeading} tabIndex={-1}>{section.title}</h3><p role="status" aria-live="polite">{readOnly?'Staff view — read only':saveStatus}</p><p>Select Save and continue at the bottom. You can also save and return later.</p>
+  return <div><p>Part {step+1} of {activeSections.length}</p><h3 ref={sectionHeading} tabIndex={-1}>{section.title}</h3><p role="status" aria-live="polite">{readOnly?'Staff view — read only':saveStatus}</p><p>Your answers save automatically. Select Continue when this section is complete; you can return to saved work later.</p>
     {readOnly&&<div className="portal-nav">{sections.map((s,i)=><button key={s.title} type="button" aria-pressed={step===i} disabled={saving} onClick={()=>void move(i)}>{i+1}. {s.title}</button>)}</div>}
     <QuestionnaireFields fields={visible} answers={answers} clientEmail={clientEmail} readOnly={readOnly} allowIncomplete={allowIncomplete} onChange={(field,value)=>{const next={...latest.current,[field]:value};latest.current=next;setAnswers(next);setSaveStatus('Changes waiting to save…');}}/>
     {minimal&&<details><summary>Additional details (complete now or later)</summary><p>You can provide these after payment. US visa details and visa-page uploads are only needed if applicable. Our team will request anything else required for your application.</p><QuestionnaireFields fields={fields.filter(f=>!basicIntakeFields.includes(f as typeof basicIntakeFields[number]))} answers={answers} clientEmail={clientEmail} readOnly={readOnly} allowIncomplete onChange={(field,value)=>{const next={...latest.current,[field]:value};latest.current=next;setAnswers(next);setSaveStatus('Changes waiting to save…');}}/></details>}
-    <div className="portal-actions">{step===0&&onBack&&<button className="portal-secondary" disabled={saving} onClick={onBack}>Back to engagement</button>}{step>0&&<button disabled={saving} onClick={()=>void move(step-1)}>Previous section</button>}{step<activeSections.length-1?<button disabled={saving} onClick={()=>void move(step+1)}>Save and continue</button>:<button disabled={saving} onClick={()=>void (async()=>{try{if(!readOnly)await save();if(!readOnly&&!allowIncomplete&&((latest.current.foreignAddress||'').trim().length<10||!foreignCountryOptions.includes(latest.current.foreignCountry||''))){setSaveStatus('Please complete your foreign address and country before continuing.');await move(1);return;}onDocuments(latest.current);}catch(e){setSaveStatus(`Not saved: ${(e as Error).message}`);}})()}>Continue to your documents</button>}{!readOnly&&<button disabled={saving} onClick={()=>void save().catch(e=>setSaveStatus(`Not saved: ${e.message}`))}>Save and return later</button>}</div><p role="status" aria-live="polite">{saveStatus}</p>
+    <div className="portal-actions">{step===0&&onBack&&<button className="portal-secondary" disabled={saving} onClick={onBack}>Back to engagement</button>}{step>0&&<button disabled={saving} onClick={()=>void move(step-1)}>Previous section</button>}{step<activeSections.length-1?<button disabled={saving} onClick={()=>void move(step+1)}>{saving?'Saving…':'Save and continue'}</button>:<button disabled={saving} onClick={()=>void (async()=>{try{if(!readOnly)await save();if(!readOnly&&!allowIncomplete&&((latest.current.foreignAddress||'').trim().length<10||!foreignCountryOptions.includes(latest.current.foreignCountry||''))){setSaveStatus('Please complete your foreign address and country before continuing.');await move(1);return;}onDocuments(latest.current);}catch(e){setSaveStatus(`Not saved: ${(e as Error).message}`);}})()}>{saving?'Saving…':'Continue to your documents'}</button>}{!readOnly&&<button disabled={saving} onClick={()=>void save().catch(e=>setSaveStatus(`Not saved: ${e.message}`))}>Save and return later</button>}</div><p role="status" aria-live="polite">{saveStatus}</p>
   </div>;
 }
