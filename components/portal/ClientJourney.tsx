@@ -1,5 +1,6 @@
 'use client';
 import { deferredDocumentsAcknowledgement,missingFinalIdentity } from '@/lib/portal/document-readiness';
+import { isForeignAddressComplete } from '@/lib/portal/questionnaire';
 import { answersNeedingReview } from '@/lib/portal/answer-support';
 import { DocumentReadiness } from './DocumentReadiness';
 import { DocumentStatus } from './DocumentStatus';
@@ -9,7 +10,6 @@ import { useEffect,useRef,useState,type ReactNode } from 'react';
 import { Check,FileSignature,CreditCard,UserRound,FolderUp } from 'lucide-react';
 import type { CaseData } from './CaseView';
 import type { QuestionnaireField } from '@/lib/portal/questionnaire';
-import { foreignCountryOptions } from '@/lib/portal/questionnaire';
 import { routeChecklist,getApplicationRoute,w7SignatureInstructions } from '@/lib/portal/checklists';
 import { casePaymentMatches } from '@/lib/portal/workflow';
 import { clientSteps,resumeClientStep,missingRequiredUploads } from '@/lib/portal/client-journey';
@@ -34,7 +34,7 @@ export function ClientJourney({data:d,fields,busy,message,upload,onBack,perform,
   const heading=useRef<HTMLHeadingElement>(null),saveInformation=useRef<(()=>Promise<void>)|null>(null);
   const docs=d.portal_documents,requirements=d.documentIntake.snapshot.requirements.map(r=>d.documentIntake.applicability[r.id]?.required===true?{...r,level:'mandatory' as const,conditional:undefined}:r),missing=missingRequiredUploads(requirements,docs,d.documentIntake.responses);
   const savedAnswers=d.portal_answers[0]?.answers||{};
-  const hasOutstanding=missing.length>0||missingFinalIdentity(savedAnswers).length>0||answersNeedingReview(savedAnswers).length>0||!foreignCountryOptions.includes(savedAnswers.foreignCountry||'')||(savedAnswers.foreignAddress||'').trim().length<10;
+  const hasOutstanding=missing.length>0||missingFinalIdentity(savedAnswers).length>0||answersNeedingReview(savedAnswers).length>0||!isForeignAddressComplete(savedAnswers);
   const guide=d.documentIntake.snapshot.guide,categoryNeeded=paymentLast&&guidesForRoute(c.route_id).length>1&&!guide;
   const collected=!['collecting','missing_information','awaiting_agreement','awaiting_payment'].includes(c.status),cancelled=c.status==='cancelled';
   const completed=[signed,informationComplete||!!c.intake_submitted_at||collected,!!c.intake_submitted_at||collected,paid];
@@ -90,7 +90,7 @@ export function ClientJourney({data:d,fields,busy,message,upload,onBack,perform,
       {step===3&&<div>{paymentLast&&!c.intake_submitted_at&&<p>Complete the details and documents steps first. You can continue with the documents you have. <button onClick={()=>void move(1)}>Go to your details</button></p>}{guide&&<p>Instruction category: {guide.code} — {guide.title}</p>}{!!c.intake_missing?.length&&<p>Saved for follow-up: {c.intake_missing.length} missing items. You can pay now; these must be resolved before submission.</p>}<p className="portal-fee">£{c.fee/100} <small>GBP · no VAT</small></p>{paid?<><p className="portal-success">✓ Payment confirmed. Your case is ready for our team to review.</p><div className="portal-actions"><button className="portal-secondary" onClick={()=>void move(2)}>Back</button><button disabled={busy} onClick={()=>void move(2)}>View your case progress</button></div></>:<><p>Use a test card only. No real funds are charged.</p>{!d.paymentsEnabled&&<p>Test payments are temporarily closed. Your signed engagement is saved.</p>}<div className="portal-actions"><button className="portal-secondary" onClick={()=>void move(2)}>Back</button><button disabled={busy||paymentStarting||!signed||!d.paymentsEnabled||(paymentLast&&!c.intake_submitted_at)} onClick={()=>void beginPayment()}>{paymentStarting?'Opening secure sandbox payment…':'Open Stripe payment'}</button></div><p>Already paid? <button className="portal-secondary" disabled={busy} onClick={()=>void perform({action:'refresh-payment'})}>Check confirmation</button></p><details><summary>Payment help</summary><p>Our review starts after confirmed payment and subject to your engagement terms. Returning from Stripe alone does not confirm payment. If confirmation is delayed, return to this case later; do not pay again.</p></details></>}</div>}
       {step===1&&signed&&!canProvide&&<><p>Your existing engagement uses payment before intake. Please complete the agreed payment to continue.</p><button disabled={busy||transitioningTo!==null} onClick={()=>void move(3)}>{transitioningTo===3?'Opening payment…':'Continue to payment'}</button></>}
       {step===1&&canProvide&&<><p>Provide the information you know. If you are unsure of anything, our team will review your case after payment and request any further information needed.</p><GuidedQuestionnaire key={c.id} caseId={c.id} fields={fields} initialAnswers={d.portal_answers[0]?.answers||{}} initialRevision={d.portal_answers[0]?.revision||0} clientEmail={d.clientEmail} allowIncomplete={paymentLast} readOnly={!['collecting','review','missing_information',...(paymentLast?['awaiting_payment']:[])].includes(c.status)} onRegisterSave={save=>{saveInformation.current=save;}} onBack={()=>void move(0)} onDocuments={answers=>{
-        if(!paymentLast&&((answers.foreignAddress||'').trim().length<10||!foreignCountryOptions.includes(answers.foreignCountry||''))){setError('Complete your foreign address and select its country before continuing. Open the Addresses section to finish it.');return;}
+        if(!paymentLast&&!isForeignAddressComplete(answers)){setError('Enter one complete address outside the United States. If you have moved to the U.S. and no longer have a permanent foreign residence, choose that option for CAA review.');return;}
         setInformationComplete(true);void move(2);
       }}/></>}
       {step===2&&canProvide&&<>
