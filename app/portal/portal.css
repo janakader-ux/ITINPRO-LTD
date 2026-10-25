@@ -97,6 +97,8 @@
 .client-portal .portal-instructions :is(a,summary,select):focus-visible { outline:3px solid #075985;outline-offset:4px; }
 
 .portal-answer-field { min-width:0; padding-bottom:1rem; border-bottom:1px solid #45516b; }
+.portal-field-note { padding:.75rem 1rem; border-left:3px solid #e2b659; background:#1c2541; font-size:.95rem; }
+.portal-transition-status { padding:.8rem 1rem; border:1px solid #b29956; border-left-width:4px; border-radius:.5rem; background:#1c2541; color:#f2d477!important; font-weight:650; }
 .portal-answer-support { font-size:.9rem; }
 .portal-follow-up { color:#fde68a!important; }
 .portal-document-status { margin-top:1.5rem; padding:1rem; border:1px solid #697890; border-radius:.75rem; }
