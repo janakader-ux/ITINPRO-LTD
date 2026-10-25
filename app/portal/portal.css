@@ -99,6 +99,16 @@
 .portal-answer-field { min-width:0; padding-bottom:1rem; border-bottom:1px solid #45516b; }
 .portal-field-note { padding:.75rem 1rem; border-left:3px solid #e2b659; background:#1c2541; font-size:.95rem; }
 .portal-transition-status { padding:.8rem 1rem; border:1px solid #70d4a6; border-left-width:4px; border-radius:.5rem; background:#102b28; color:#a9f0cc!important; font-weight:650; }
+.portal-upload-help,.portal-sandbox-note,.portal-upload-confirmation,.portal-upload-error { padding:.8rem 1rem;border-radius:.6rem;line-height:1.6; }
+.portal-upload-help { background:#1c2541;border-left:3px solid #dfbe64; }
+.portal-sandbox-note { background:#2a2430;border-left:3px solid #dfbe64;font-size:.92rem; }
+.portal-upload-confirmation { background:#102b28;border:1px solid #70d4a6;color:#a9f0cc!important; }
+.portal-upload-error { background:#391c23;border:1px solid #fca5a5;color:#fecaca!important; }
+.portal-passport-sample { margin:1.25rem 0;padding:1rem;border:1px solid #697890;border-radius:.7rem;background:#0d162a; }
+.portal-passport-sample img { display:block;width:min(100%,520px);height:auto;margin:auto; }
+.portal-passport-sample figcaption { margin-top:.6rem;color:#d9dfeb;font-size:.9rem;text-align:center; }
+.portal-upload .portal-synthetic-check { display:flex;align-items:flex-start;gap:.55rem;margin:1rem 0; }
+.portal-upload .portal-synthetic-check input { flex:0 0 auto;width:1.1rem;height:1.1rem;margin:.2rem 0 0; }
 .portal-required-mark { color:#ffcc80;font-weight:800; }
 .portal-required-legend { font-size:.88rem; color:#f2d477!important; }
 .portal-intake-progress { display:flex;gap:.5rem;list-style:none;padding:0;margin:1rem 0; }

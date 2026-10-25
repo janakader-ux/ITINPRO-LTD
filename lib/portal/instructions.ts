@@ -55,7 +55,7 @@ export function submissionDocumentBlockers(requirements:Requirement[],documents:
   for(const r of requirements){
     const level=normalizeRequirement(r).level,decision=applicability[r.id];
     if(level==='conditional'&&!decision){missing.push(`applicability:${r.id}`);continue;}
-    const needed=level==='mandatory'||decision?.required===true;
+    const needed=r.id!=='address-evidence'&&(level==='mandatory'||decision?.required===true);
     if(!needed)continue;
     const accepted=documents.filter(d=>d.item_id===r.id&&d.kind==='upload'&&d.state==='accepted');
     if(!accepted.length)missing.push(`review:${r.id}`);

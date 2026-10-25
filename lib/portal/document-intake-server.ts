@@ -1,13 +1,16 @@
 import type { paymentDatabase } from '../payments';
 import { documentHash } from './validation';
 import { makeInstructionSnapshot,type DocumentIntake,type InstructionSnapshot } from './instructions';
+import { checklistVersion,passportInstructions } from './checklists';
 type Admin=ReturnType<typeof paymentDatabase>;
 type CaseInfo={id:string;route_id:string;workflow?:string;owner_id:string};
 export async function readDocumentIntake(admin:Admin,c:CaseInfo):Promise<DocumentIntake|null>{
   const r=await admin.from('portal_document_intake').select('*').eq('case_id',c.id).maybeSingle();if(r.error)throw r.error;
   if(!r.data?.instruction_version_id)return null;
   const v=await admin.from('portal_instruction_versions').select('snapshot').eq('id',r.data.instruction_version_id).eq('case_id',c.id).single();if(v.error)throw v.error;
-  return {...r.data,snapshot:v.data.snapshot as InstructionSnapshot};
+  const stored=v.data.snapshot as InstructionSnapshot;
+  const snapshot:InstructionSnapshot={...stored,version:checklistVersion,requirements:stored.requirements.map(item=>item.id==='passport-spread'?{...item,title:'Passport scan (for the ITIN applicant)',instructions:passportInstructions}:item.id==='address-evidence'?{...item,title:'Proof of address (for the ITIN applicant, optional)',instructions:'Not mandatory. If you have a joint bank account statement or joint utility bill showing the ITIN applicant’s name and address, you may upload it for ITIN PRO’s internal records and AML checks. Do not obtain a new document just for this request. It does not replace any IRS-required evidence.',conditional:'Optional — internal records and AML checks only',level:'optional' as const}:item)};
+  return {...r.data,snapshot};
 }
 export async function ensureDocumentIntake(admin:Admin,c:CaseInfo):Promise<DocumentIntake>{
   const ready=await readDocumentIntake(admin,c);if(ready)return ready;
