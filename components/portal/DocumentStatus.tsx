@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { documentStatusOptions,documentResponse,type DocumentStatus as Status } from '@/lib/portal/answer-support';
-export function DocumentStatus({initial,uploaded,optional=false,busy,onBack,onContinue,onMoreDocuments,onFinish,last}:{initial?:{status:Status;note:string};uploaded:boolean;optional?:boolean;busy:boolean;onBack:()=>void;onContinue:(response:ReturnType<typeof documentResponse>|null)=>Promise<void>;onMoreDocuments:()=>void;onFinish:()=>void;last:boolean}){
+export function DocumentStatus({initial,uploaded,optional=false,busy,onBack,onContinue,onMoreDocuments,onFinish}:{initial?:{status:Status;note:string};uploaded:boolean;optional?:boolean;busy:boolean;onBack:()=>void;onContinue:(response:ReturnType<typeof documentResponse>|null)=>Promise<void>;onMoreDocuments:()=>void;onFinish:()=>void}){
   const [status,setStatus]=useState<Status|''>(initial?.status||''),[note,setNote]=useState(initial?.note||'');
   if(uploaded)return <section className="portal-document-status portal-upload-next" aria-labelledby="other-documents-question">
     <fieldset disabled={busy}>
