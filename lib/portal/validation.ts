@@ -33,7 +33,18 @@ export const answersInput=baseAnswers.superRefine((value,ctx)=>{
   if(value.mailingAddressChoice==='Different mailing address')for(const key of ['mailingCountry','mailingStreetAddress','mailingCity'])if(!answer(key).trim())ctx.addIssue({code:'custom',path:[key],message:'Complete the different mailing address.'});
   if(value.foreignAddressStatus!=='moved-country-only'||value.w7Reason==='b')for(const key of ['foreignStreetAddress','foreignCity'])if(!answer(key).trim())ctx.addIssue({code:'custom',path:[key],message:'Complete the foreign street address and city.'});
   if(value.passportExpiry&&/^\d{4}-\d{2}-\d{2}$/.test(value.passportExpiry)&&value.passportExpiry<new Date().toISOString().slice(0,10))ctx.addIssue({code:'custom',path:['passportExpiry'],message:'The passport must be unexpired when you submit your application.'});
+  if(value.filingStatus&&!['Filed already','Not yet filed'].includes(value.filingStatus))ctx.addIssue({code:'custom',path:['filingStatus'],message:'Select Filed already or Not yet filed.'});
   if(value.applicationType==='renewal'&&value.previousItinStatus!=='Yes')ctx.addIssue({code:'custom',path:['previousItinStatus'],message:'A renewal needs the previously assigned ITIN details.'});
+  if(value.previousItinStatus==='Yes'||value.applicationType==='renewal'){
+    const kind=answer('previousItinType');
+    if(!kind)ctx.addIssue({code:'custom',path:['previousItinType'],message:'Select the previous number type.'});
+    if(['ITIN','Both'].includes(kind)&&!answer('previousItin').trim())ctx.addIssue({code:'custom',path:['previousItin'],message:'Enter the previous ITIN number.'});
+    if(['IRSN (temporary IRS number)','Both'].includes(kind)){
+      if(!answer('previousIrsn').trim())ctx.addIssue({code:'custom',path:['previousIrsn'],message:'Enter the IRS temporary number (IRSN).'});
+      if(!answer('irsNoticeType').trim())ctx.addIssue({code:'custom',path:['irsNoticeType'],message:'Select the CP notice number shown on your IRS letter, or choose No notice number shown / Not sure.'});
+    }
+    for(const key of ['priorItinFirstName','priorItinLastName'])if(!answer(key).trim())ctx.addIssue({code:'custom',path:[key],message:'Enter the name used for the previous number.'});
+  }
   if((value.w7Reason==='f'||value.w7Reason==='h')&&!String(value.treatyClaimStatus||'').trim())ctx.addIssue({code:'custom',path:['treatyClaimStatus'],message:'Select Yes, No or Not sure.'});
   if(value.w7Reason==='a'||value.w7Reason==='h'||value.w7Reason==='f')if(!String(value.boxHException||'').trim())ctx.addIssue({code:'custom',path:['boxHException'],message:'Select the applicable box h exception, or ask the CAA team to review.'});
   if(value.w7Reason==='a'||(value.w7Reason==='f'||value.w7Reason==='h')&&value.treatyClaimStatus==='yes')if(!String(value.treatyArticle||'').trim())ctx.addIssue({code:'custom',path:['treatyArticle'],message:'Enter the treaty article or select “Not sure” for CAA review.'});
@@ -43,8 +54,9 @@ export const answersInput=baseAnswers.superRefine((value,ctx)=>{
   if(value.w7Reason==='h'&&!String(value.notes||'').trim())ctx.addIssue({code:'custom',path:['notes'],message:'Explain your reason and the U.S. income or transaction.'});
   if(['h','f'].includes(value.w7Reason||'')&&['1a','1b'].includes(value.boxHException||'')&&!String(value.companyEin||'').trim())ctx.addIssue({code:'custom',path:['companyEin'],message:'Enter the partnership or business EIN from your evidence.'});
   if(['h','f'].includes(value.w7Reason||'')&&['3','4'].includes(value.boxHException||''))for(const key of ['propertyAddress','closingDate'])if(!answer(key).trim())ctx.addIssue({code:'custom',path:[key],message:'Enter the U.S. property address and transaction date.'});
-  if(['b','c','d','e','f','g'].includes(value.w7Reason||'')&&!String(value.taxReturnStatus||'').trim())ctx.addIssue({code:'custom',path:['taxReturnStatus'],message:'Select the status of your U.S. tax return.'});
-  if(value.visaType&&value.visaType!=='No U.S. visa'&&!value.visaType.startsWith('Not sure'))for(const key of ['visaNumber','visaExpiry','lastUsEntry'])if(!answer(key).trim())ctx.addIssue({code:'custom',path:[key],message:'Complete the U.S. visa detail or contact the CAA team.'});
+  if(!answer('taxPurpose').trim())ctx.addIssue({code:'custom',path:['taxPurpose'],message:'Select the U.S. tax purpose or exception.'});
+  if(['1040','1040-NR'].includes(answer('taxPurpose'))&&!answer('filingStatus').trim())ctx.addIssue({code:'custom',path:['filingStatus'],message:'Select Filed already or Not yet filed.'});
+  if(value.visaType&&value.visaType!=='No U.S. visa'&&value.visaType!=='Visa Waiver Program / ESTA'&&!value.visaType.startsWith('Not sure'))for(const key of ['visaNumber','visaExpiry','lastUsEntry'])if(!answer(key).trim())ctx.addIssue({code:'custom',path:[key],message:'Complete the U.S. visa detail or contact the CAA team.'});
 });
 export const draftAnswersInput=z.object(addressFields).strict();
 export function documentHash(value: unknown) { return createHash('sha256').update(JSON.stringify(value)).digest('hex'); }

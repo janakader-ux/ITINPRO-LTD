@@ -11,7 +11,7 @@ export const basicFields = [
   'contactEmailChoice','contactEmail','phoneNumber',
   // Lines 6a–6g
   'passportIssuer','passportNumber','passportExpiry','foreignTaxId','visaType','visaNumber','visaExpiry','lastUsEntry',
-  'previousItinStatus','previousItinType','previousItin','priorItinFirstName','priorItinMiddleName','priorItinLastName','priorItinName',
+  'previousItinStatus','previousItinType','previousItin','previousIrsn','irsNoticeType','priorItinFirstName','priorItinMiddleName','priorItinLastName','priorItinName',
   'relationship','usPersonFirstName','usPersonMiddleName','usPersonLastName','usPersonTaxId',
   'spouseName','spouseTaxId','institutionName','institutionCityState','durationOfStay','companyName','companyEin',
   // Tax return / supporting evidence context and route-specific notes

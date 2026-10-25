@@ -10,6 +10,8 @@ const mailingAddress=(answers:W7AnswerSet)=>answers.mailingAddressChoice==='Diff
 export function toW7ImportData(answers:W7AnswerSet){
   const priorName=fullName(answers,'priorItin')||val(answers,'priorItinName');
   const visa=val(answers,'visaType');
+  const vwpSelection=visa==='Visa Waiver Program / ESTA';
+  const previousNumber=val(answers,'previousItin')||val(answers,'previousIrsn');
   return {
     applicationType:val(answers,'applicationType'),
     boxes:{a:answers.w7Reason==='a',b:answers.w7Reason==='b',c:answers.w7Reason==='c',d:answers.w7Reason==='d',e:answers.w7Reason==='e',f:answers.w7Reason==='f',g:answers.w7Reason==='g',h:answers.w7Reason==='h'},
@@ -22,9 +24,9 @@ export function toW7ImportData(answers:W7AnswerSet){
     line5:{sex:val(answers,'sex')},
     line6a:{countryOfCitizenship:[val(answers,'citizenship'),...val(answers,'additionalCitizenships').split(',').map(x=>x.trim()).filter(Boolean)].filter(Boolean)},
     line6b:{foreignTaxId:val(answers,'foreignTaxId')||'N/A'},
-    line6c:{visaType:visa||'No U.S. visa',visaNumber:visa&&visa!=='No U.S. visa'?val(answers,'visaNumber'):'',visaExpiry:visa&&visa!=='No U.S. visa'?date(val(answers,'visaExpiry')):''},
+    line6c:{visaType:vwpSelection?'No U.S. visa':visa||'No U.S. visa',visaNumber:visa&&!['No U.S. visa','Visa Waiver Program / ESTA'].includes(visa)?val(answers,'visaNumber'):'',visaExpiry:visa&&!['No U.S. visa','Visa Waiver Program / ESTA'].includes(visa)?date(val(answers,'visaExpiry')):'',visaWaiverSelection:vwpSelection?'Visa Waiver Program / ESTA':''},
     line6d:{documentType:'Passport',issuingCountry:val(answers,'passportIssuer'),number:val(answers,'passportNumber'),expiryDate:date(val(answers,'passportExpiry')),dateOfEntry:date(val(answers,'lastUsEntry'))},
-    line6e:{previouslyAssigned:answers.previousItinStatus==='Yes'?'Yes':answers.previousItinStatus==='No'?'No':'CAA review required',status:val(answers,'previousItinStatus'),numberType:val(answers,'previousItinType'),number:val(answers,'previousItin'),name:priorName},
+    line6e:{previouslyAssigned:answers.previousItinStatus==='Yes'?'Yes':answers.previousItinStatus==='No'?'No':'CAA review required',status:val(answers,'previousItinStatus'),numberType:val(answers,'previousItinType'),number:previousNumber,itinNumber:val(answers,'previousItin'),irsnNumber:val(answers,'previousIrsn'),irsNoticeType:val(answers,'irsNoticeType'),name:priorName},
     line6f:{birthName:answers.birthNameDifferent==='Yes'?(fullName(answers,'birth')||val(answers,'birthName')):'',priorItinName:priorName},
     line6g:{institution:val(answers,'institutionName'),institutionCityState:val(answers,'institutionCityState'),duration:val(answers,'durationOfStay'),company:val(answers,'companyName'),companyEin:val(answers,'companyEin')},
     usPerson:{relationship:val(answers,'relationship'),fullName:fullName(answers,'usPerson')||val(answers,'spouseName'),ssnOrItin:val(answers,'usPersonTaxId')||val(answers,'spouseTaxId')},

@@ -62,7 +62,7 @@ export function ClientJourney({data:d,fields,busy,message,upload,onBack,perform,
       <ol className="portal-stepper" aria-label="Application progress">{clientSteps.map((title,i)=>{const Icon=icons[i];return <li key={title} aria-current={!intro&&step===i?'step':undefined} className={completed[i]?'is-complete':step===i?'is-current':''}><span className="portal-step-icon">{completed[i]?<Check size={20} aria-label="Completed"/>:<Icon size={20} aria-hidden="true"/>}</span><span>{i+1}. {title}</span></li>;})}</ol>
       <progress max={4} value={completed.filter(Boolean).length} aria-label={`${completed.filter(Boolean).length} of 4 steps completed`}/>
       <p className="portal-save-note">Your details are saved before the next step opens. Watch for the status update after each action.</p>
-      {transitioningTo!==null&&<p className="portal-transition-status" role="status" aria-live="polite">Saving your progress, then opening step {transitioningTo+1}: {clientSteps[transitioningTo]}…</p>}
+      {transitioningTo!==null&&<p className="portal-transition-status" role="status" aria-live="polite">Please wait — saving your progress and moving to step {transitioningTo+1}: {clientSteps[transitioningTo]}. Do not go back or refresh.</p>}
       {(error||message)&&<p role={error?'alert':'status'}>{error||message}</p>}
     </div>
     {cancelled?<><h2 ref={heading} tabIndex={-1}>This case is closed</h2><p>Contact your adviser before proceeding.</p></>:intro?<div className="portal-no-print">
