@@ -19,13 +19,16 @@ test('every missing-document choice saves without a note but does not waive subm
   }
 });
 test('missing-document controls are visible, require a status and keep notes optional',()=>{
-  const html=renderToStaticMarkup(React.createElement(DocumentStatus,{uploaded:false,busy:false,last:false,onBack:()=>{},onContinue:async()=>{}}));
+  const html=renderToStaticMarkup(React.createElement(DocumentStatus,{uploaded:false,busy:false,last:false,onBack:()=>{},onContinue:async()=>{},onMoreDocuments:()=>{},onFinish:()=>{}}));
   for(const choice of documentStatusOptions)assert.ok(html.includes(choice.label));
   assert.match(html,/<select[^>]*required/);
   assert.doesNotMatch(html,/<textarea[^>]*required/);
   assert.ok(!html.includes('<details'));
   assert.ok(html.includes('Save and next document'));
-  const uploaded=renderToStaticMarkup(React.createElement(DocumentStatus,{uploaded:true,busy:false,last:true,onBack:()=>{},onContinue:async()=>{}}));
+  const uploaded=renderToStaticMarkup(React.createElement(DocumentStatus,{uploaded:true,busy:false,last:true,onBack:()=>{},onContinue:async()=>{},onMoreDocuments:()=>{},onFinish:()=>{}}));
+  assert.match(uploaded,/Do you have any other documents to upload\?/);
+  assert.match(uploaded,/Yes — upload another document/);
+  assert.match(uploaded,/No — review and continue/);
   assert.doesNotMatch(uploaded,/<select[^>]*required/);
 });
 test('help choices save as explicit declarations, disable mistaken date entry, and cannot pass the final foreign-address check',()=>{
