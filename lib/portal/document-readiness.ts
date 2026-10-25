@@ -3,7 +3,7 @@ export function validDocumentDeferral(value:{documentsLater?:unknown;acknowledge
 export const basicIntakeFields=['applicationType','w7Reason','birthNameDifferent','foreignCountry','foreignAddressStatus','firstName','middleName','lastName','birthNameDifferent','birthFirstName','birthMiddleName','birthLastName','dateOfBirth','sex','birthCountry','birthCity','citizenship','foreignAddressStatus','foreignCountry','foreignStreetAddress','foreignCity','foreignRegion','foreignPostalCode','mailingAddressChoice','mailingCountry','mailingStreetAddress','mailingCity','mailingRegion','mailingPostalCode','contactEmailChoice','contactEmail','phoneNumber'] as const;
 export const finalIdentityFields=['applicationType','w7Reason','birthNameDifferent','foreignAddressStatus','foreignCountry','firstName','lastName','dateOfBirth','birthCountry','citizenship','sex','phoneNumber','mailingAddressChoice','passportIssuer','passportNumber','passportExpiry','previousItinStatus','visaType'] as const;
 export function missingFinalIdentity(answers:Record<string,unknown>={}){
-  const missing=finalIdentityFields.filter(key=>typeof answers[key]!=='string'||!(answers[key] as string).trim());
+  const missing:string[]=finalIdentityFields.filter(key=>typeof answers[key]!=='string'||!(answers[key] as string).trim());
   if(answers.mailingAddressChoice==='Different mailing address'){
     for(const key of ['mailingCountry','mailingStreetAddress','mailingCity'])if(typeof answers[key]!=='string'||!(answers[key] as string).trim())missing.push(key);
   }
