@@ -93,8 +93,8 @@ export function QuestionnaireFields({fields,answers,clientEmail,readOnly,allowIn
   const showPrior=answers.previousItinStatus==='Yes'||answers.applicationType==='renewal';
   const hasPriorIrsn=showPrior&&['IRSN (temporary IRS number)','Both'].includes(answers.previousItinType||'');
   const hasPriorItin=showPrior&&['ITIN','Both'].includes(answers.previousItinType||'');
-  const vwpEligible=vwp.has(answers.citizenship||'');
   const vwp=new Set<string>(visaWaiverCountries as readonly string[]);
+  const vwpEligible=vwp.has(answers.citizenship||'');
   const mailingHelpStatus=answerSupportStatus(answers.mailingAddressHelp||'');
   return <div className="portal-fields">{fields.filter(x=>{
     if(legacyFields.has(x))return false;
