@@ -40,7 +40,8 @@ export function ClientJourney({data:d,fields,busy,message,upload,onBack,perform,
   const informationSaved=informationComplete||!!d.portal_answers[0]?.answers;
   const documentsStarted=docs.some(x=>x.kind==='upload')||Object.keys(d.documentIntake.responses||{}).length>0||!!c.intake_submitted_at||collected;
   const completed=[signed,informationSaved,documentsStarted,paid];
-  const progressPercent=paid||collected?100:step===3?90:step===2?(documentIndex>=requirements.length?80:documentsStarted?60:50):step===1?(informationSaved?40:30):signed?20:10;
+  const progressPercent=paid||collected||step===3?100:step===2?(documentIndex>=requirements.length?80:documentsStarted?60:50):step===1?(informationSaved?40:30):signed?20:10;
+  const progressState=paid||collected?'Complete':step===3?'Checkout — payment pending':transitioningTo!==null?'Moving to the next step':`Step ${step+1} of 4 in progress`;
   useEffect(()=>{heading.current?.focus({preventScroll:true});heading.current?.scrollIntoView({block:'start',behavior:'auto'});},[step,intro,c.status]);
   function setDocumentIndex(index:number){setDocumentState(index);const url=new URL(window.location.href);url.searchParams.set('document',String(index));window.history.replaceState(null,'',url);}
   async function move(next:number){
@@ -65,7 +66,7 @@ export function ClientJourney({data:d,fields,busy,message,upload,onBack,perform,
     <div className="portal-no-print"><div className="portal-case-context"><button className="portal-secondary" onClick={()=>void backToCases()}>My cases</button><span>{c.legal_name} · £{c.fee/100}</span></div>
       <ol className="portal-stepper" aria-label="Application progress">{clientSteps.map((title,i)=>{const Icon=icons[i],moving=transitioningTo===i;return <li key={title} aria-current={!intro&&step===i?'step':undefined} aria-label={`${title}: ${completed[i]?'complete':moving?'moving':step===i?'in progress':'up next'}`} className={completed[i]?'is-complete':moving?'is-moving':step===i?'is-current':''}><span className="portal-step-icon">{completed[i]?<Check size={20} aria-label="Completed"/>:<Icon size={20} aria-hidden="true"/>}</span><span>{i+1}. {title}</span><span className="portal-step-status">{completed[i]?'Complete':moving?'Moving…':step===i?'In progress':'Up next'}</span></li>;})}</ol>
       <progress max={100} value={progressPercent} aria-label={`${progressPercent}% complete`}/>
-      <p className="portal-progress-label"><strong>Application progress: {progressPercent}%</strong>{!paid&&<span> · Step {transitioningTo!==null?transitioningTo+1:step+1} of 4 {transitioningTo!==null?'is opening':step<3?'in progress':'ready for payment'}</span>}</p>
+      <p className="portal-progress-label"><strong>Application progress: {progressPercent}%</strong><span> · {progressState}</span></p>
       <p className="portal-save-note">Your signed engagement, details, and uploads are saved to your case as you go. You can return later and continue from your saved progress.</p>
       {transitioningTo!==null&&<p className="portal-transition-status" role="status" aria-live="polite">Please wait — saving your progress and moving to step {transitioningTo+1}: {clientSteps[transitioningTo]}. Do not go back or refresh.</p>}
       {(error||message)&&<p role={error?'alert':'status'}>{error||message}</p>}
