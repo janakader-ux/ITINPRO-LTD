@@ -2,7 +2,7 @@
 import { answerSupportOptions,answerSupportStatus } from '@/lib/portal/answer-support';
 import { basicFields } from '@/lib/portal/fields';
 import { selectOptions,dateFields,multilineFields,type QuestionnaireField } from '@/lib/portal/questionnaire';
-const labels:Partial<Record<typeof basicFields[number],string>>={dateOfBirth:'Date of birth (YYYY-MM-DD)',sex:'Sex for Form W-7',passportNumber:'Passport number (test value only)',passportExpiry:'Passport expiry (YYYY-MM-DD)',previousItin:'Previous ITIN / IRSN (if held)',priorItinName:'Name under prior ITIN',spouseTaxId:'US spouse / parent SSN or ITIN (test value only)',lastUsEntry:'Last US entry date or “never entered”',filingStatus:'Tax-return filing status',taxPurpose:'Federal tax purpose / income details',ssnEligibility:'SSN eligibility / pending application (explain)',signerAuthority:'Who will sign W-7 and their authority?',institutionCityState:'Educational institution city and state',durationOfStay:'Length of stay in the US',paymentYear:'Year of payment / distribution',taxBenefit:'Tax benefit claimed for the spouse or dependent',closingDate:'Property closing date (YYYY-MM-DD)'};
+const labels:Partial<Record<typeof basicFields[number],string>>={dateOfBirth:'Date of birth (YYYY-MM-DD)',sex:'Sex for Form W-7',passportNumber:'Passport number (test value only)',passportExpiry:'Passport expiry (YYYY-MM-DD)',previousItin:'Previous ITIN / IRSN (if held)',priorItinName:'Name under prior ITIN',spouseTaxId:'US spouse / parent SSN or ITIN (test value only)',lastUsEntry:'Last US entry date or “never entered”',filingStatus:'Tax-return filing status',taxPurpose:'Federal tax purpose / income details',ssnEligibility:'SSN eligibility / pending application (explain)',signerAuthority:'Who will sign W-7 and their authority?',institutionCityState:'Educational institution city and state',durationOfStay:'Length of stay in the US',paymentYear:'Year of payment / distribution',taxBenefit:'Tax benefit claimed for the spouse or dependent',closingDate:'Property closing date (YYYY-MM-DD)',foreignCountry:'Country outside the United States',foreignAddress:'Non-U.S. address',mailingCountry:'Mailing country',mailingAddress:'Mailing address'};
 export function QuestionnaireFields({fields,answers,clientEmail,readOnly,allowIncomplete=false,onChange}:{fields:QuestionnaireField[];answers:Record<string,string>;clientEmail:string;readOnly:boolean;allowIncomplete?:boolean;onChange:(field:QuestionnaireField,value:string)=>void}){return <div className="portal-fields">{fields.map(x=>{
         const saved=answers[x]||'';
         const mailingChoice=answers.mailingAddressChoice||'Different mailing address';
@@ -10,7 +10,7 @@ export function QuestionnaireFields({fields,answers,clientEmail,readOnly,allowIn
         const sameAddress=mailingChoice==='Same as foreign address'&&['mailingAddress','mailingCountry'].includes(x);
         const portalContact=x==='contactEmail'&&emailChoice==='Use my portal email';
         const supportStatus=answerSupportStatus(saved);
-        const disabled=readOnly||sameAddress||portalContact||!!supportStatus;
+        const disabled=readOnly||sameAddress||portalContact;
         const mirrored=sameAddress?(x==='mailingCountry'?(answers.foreignCountry||''):(answers.foreignAddress||'')):portalContact?clientEmail:saved;
         const value=x==='mailingAddressChoice'?mailingChoice:x==='contactEmailChoice'?emailChoice:mirrored;
         const change=(next:string)=>onChange(x,next);
@@ -24,7 +24,8 @@ export function QuestionnaireFields({fields,answers,clientEmail,readOnly,allowIn
           {portalContact&&<small>{clientEmail} — your sign-in email stays the same.</small>}
           {x==='contactEmail'&&emailChoice==='Use another contact email'&&<small>This contact address is for staff review. Portal sign-in continues to use {clientEmail}.</small>}
         </label>
-        <label className="portal-answer-support">Need help with this answer?<select aria-label={`Help with ${labels[x]||x.replace(/([A-Z])/g,' $1').toLowerCase()}`} value={supportStatus} disabled={readOnly||sameAddress||portalContact} onChange={e=>change(answerSupportOptions.find(option=>option.value===e.target.value)?.answer||'')}><option value="">Enter / use my answer</option>{answerSupportOptions.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+        {x==='foreignAddress'&&<p className="portal-field-note">Please provide one complete address outside the United States. We need it to prepare and submit your ITIN application. If you have moved to the U.S., enter your most recent foreign address. If you cannot provide one, we cannot submit the application unless your CAA has reviewed an applicable IRS exception.</p>}
+        {x==='mailingAddress'&&mailingChoice!=='Same as foreign address'&&<label className="portal-answer-support">Need help with your mailing address?<select aria-label="Help with mailing address" value={supportStatus} disabled={readOnly} onChange={e=>change(answerSupportOptions.find(option=>option.value===e.target.value)?.answer||'')}><option value="">Enter my mailing address</option>{answerSupportOptions.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</select></label>}
         {!!supportStatus&&<p className="portal-follow-up">Saved for staff review. You can save and continue.</p>}
         </div>;
       })}</div>;}
