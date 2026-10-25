@@ -7,12 +7,13 @@ import { foreignCountryOptions } from './questionnaire';
 export { basicFields } from './fields';
 export const caseInput = z.object({ orderId: z.uuid(), routeId: z.string().refine(x => !!getApplicationRoute(x)), legalName: z.string().trim().min(2).max(100), address: z.string().trim().min(10).max(500), taxYear: z.number().int().min(2000).max(new Date().getUTCFullYear() + 1) });
 const addressFields=Object.fromEntries(basicFields.map(x=>[x,z.string().trim().max(x.toLowerCase().includes('address')||x==='notes'?1500:200).optional()]));
-const foreignAddressSchema=z.object({
+const foreignAddressBase=z.object({
   foreignAddress:z.string().trim().max(1500).optional().default(''),
   foreignCountry:z.string().refine(value=>foreignCountryOptions.includes(value),'Select a country outside the United States.'),
   foreignAddressStatus:z.string().optional(),
   w7Reason:z.string().optional()
-}).superRefine((value,ctx)=>{
+});
+const foreignAddressSchema=foreignAddressBase.superRefine((value,ctx)=>{
   const countryOnly=value.foreignAddressStatus==='moved-country-only'&&value.w7Reason!=='b';
   if(countryOnly)return;
   if((value.foreignAddress||'').trim().length<10)ctx.addIssue({code:'custom',path:['foreignAddress'],message:'Enter one complete foreign address.'});
@@ -20,8 +21,8 @@ const foreignAddressSchema=z.object({
 });
 export const foreignAddressInput=foreignAddressSchema;
 const baseAnswers=z.object(addressFields).extend({
-  foreignAddress:foreignAddressSchema.shape.foreignAddress,
-  foreignCountry:foreignAddressSchema.shape.foreignCountry,
+  foreignAddress:foreignAddressBase.shape.foreignAddress,
+  foreignCountry:foreignAddressBase.shape.foreignCountry,
   contactEmail:z.union([z.email(),z.literal('')]).optional()
 }).strict();
 export const answersInput=baseAnswers.superRefine((value,ctx)=>{
