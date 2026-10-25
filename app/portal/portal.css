@@ -47,8 +47,19 @@
 .portal-step-icon { display:grid;place-items:center;width:2.5rem;height:2.5rem;border:1px solid #697890;border-radius:50%;background:#1c2541; }
 .portal-stepper .is-current .portal-step-icon { background:#dfbe64;color:#0a1128;border-color:#dfbe64; }
 .portal-stepper .is-complete .portal-step-icon { border-color:#70d4a6;color:#70d4a6; }
-.portal-client-journey progress { display:block;width:100%;height:.45rem;accent-color:#dfbe64; }
+.portal-stepper .is-moving .portal-step-icon { background:#70d4a6;color:#0a1128;border-color:#70d4a6;animation:portal-step-pulse 1s ease-in-out infinite alternate; }
+.portal-step-status { color:#b8c2d6;font-size:.72rem; }
+.portal-stepper .is-current .portal-step-status { color:#dfbe64;font-weight:700; }
+.portal-stepper .is-complete .portal-step-status { color:#70d4a6;font-weight:700; }
+.portal-client-journey progress { display:block;width:100%;height:.65rem;accent-color:#70d4a6; }
+.portal-client-journey progress::-webkit-progress-value { background:#70d4a6;transition:width .45s ease; }
+.portal-client-journey progress::-moz-progress-bar { background:#70d4a6;transition:width .45s ease; }
+.portal-progress-label { margin:.4rem 0;font-size:.9rem; }
+.portal-progress-label strong { color:#70d4a6; }
 .portal-save-note { font-size:.8rem; }
+.portal-upload-next fieldset { border:1px solid #697890;border-radius:.7rem;padding:1rem; }
+.portal-upload-next legend { padding:0 .35rem;font-size:1.1rem;font-weight:700; }
+@keyframes portal-step-pulse { from { box-shadow:0 0 0 0 rgba(112,212,166,.1); } to { box-shadow:0 0 0 .5rem rgba(112,212,166,.24); } }
 .portal-current-step p:first-child { color:#dfbe64;text-transform:uppercase;letter-spacing:.06em;font-size:.8rem; }
 .portal-current-step h2,.portal-client-journey h3 { scroll-margin-top:120px;outline:none; }
 .portal-start-guide { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin:1.5rem 0; }
