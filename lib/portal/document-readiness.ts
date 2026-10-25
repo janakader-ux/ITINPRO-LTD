@@ -15,7 +15,8 @@ export function missingFinalIdentity(answers:Record<string,unknown>={}){
   if(answers.w7Reason==='a'||answers.w7Reason==='h'||answers.w7Reason==='f'){
     if(!String(answers.boxHException||'').trim())missing.push('boxHException');
   }
-  if(['b','c','d','e','f','g'].includes(String(answers.w7Reason||''))&&!String(answers.taxReturnStatus||'').trim())missing.push('taxReturnStatus');
+  if(!String(answers.taxPurpose||'').trim())missing.push('taxPurpose');
+  if(['1040','1040-NR'].includes(String(answers.taxPurpose||''))&&!String(answers.filingStatus||'').trim())missing.push('filingStatus');
   if(answers.w7Reason==='d'||answers.w7Reason==='e'){
     for(const key of ['usPersonFirstName','usPersonLastName'])if(!String(answers[key]||'').trim())missing.push(key);
   }
@@ -27,11 +28,17 @@ export function missingFinalIdentity(answers:Record<string,unknown>={}){
   if(answers.w7Reason==='a'||(answers.w7Reason==='f'||answers.w7Reason==='h')&&answers.treatyClaimStatus==='yes'){
     if(!String(answers.treatyArticle||'').trim())missing.push('treatyArticle');
   }
-  if(answers.visaType&&answers.visaType!=='No U.S. visa'&&!String(answers.visaType).startsWith('Not sure')){
+  if(answers.visaType&&answers.visaType!=='No U.S. visa'&&answers.visaType!=='Visa Waiver Program / ESTA'&&!String(answers.visaType).startsWith('Not sure')){
     for(const key of ['visaNumber','visaExpiry','lastUsEntry'])if(!String(answers[key]||'').trim())missing.push(key);
   }
   if(answers.previousItinStatus==='Yes'||answers.applicationType==='renewal'){
-    if(!String(answers.previousItin||'').trim())missing.push('previousItin');
+    const kind=String(answers.previousItinType||'');
+    if(!kind)missing.push('previousItinType');
+    if(['ITIN','Both'].includes(kind)&&!String(answers.previousItin||'').trim())missing.push('previousItin');
+    if(['IRSN (temporary IRS number)','Both'].includes(kind)){
+      if(!String(answers.previousIrsn||'').trim())missing.push('previousIrsn');
+      if(!String(answers.irsNoticeType||'').trim())missing.push('irsNoticeType');
+    }
     if(!String(answers.priorItinFirstName||'').trim())missing.push('priorItinFirstName');
     if(!String(answers.priorItinLastName||'').trim())missing.push('priorItinLastName');
   }

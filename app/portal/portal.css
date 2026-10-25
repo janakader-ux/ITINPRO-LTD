@@ -98,7 +98,17 @@
 
 .portal-answer-field { min-width:0; padding-bottom:1rem; border-bottom:1px solid #45516b; }
 .portal-field-note { padding:.75rem 1rem; border-left:3px solid #e2b659; background:#1c2541; font-size:.95rem; }
-.portal-transition-status { padding:.8rem 1rem; border:1px solid #b29956; border-left-width:4px; border-radius:.5rem; background:#1c2541; color:#f2d477!important; font-weight:650; }
+.portal-transition-status { padding:.8rem 1rem; border:1px solid #70d4a6; border-left-width:4px; border-radius:.5rem; background:#102b28; color:#a9f0cc!important; font-weight:650; }
+.portal-required-mark { color:#ffcc80;font-weight:800; }
+.portal-required-legend { font-size:.88rem; color:#f2d477!important; }
+.portal-intake-progress { display:flex;gap:.5rem;list-style:none;padding:0;margin:1rem 0; }
+.portal-intake-progress li { flex:1;display:flex;align-items:center;gap:.5rem;min-width:0;color:#aeb8ca;font-size:.82rem; }
+.portal-intake-progress li>span:first-child { display:grid;place-items:center;flex:0 0 1.65rem;height:1.65rem;border:1px solid #697890;border-radius:50%;font-weight:750; }
+.portal-intake-progress li.is-complete>span:first-child { background:#70d4a6;border-color:#70d4a6;color:#0a1128; }
+.portal-intake-progress li.is-current>span:first-child { border-color:#70d4a6;color:#a9f0cc;box-shadow:0 0 0 3px #70d4a633; }
+.portal-intake-progress li.is-complete,.portal-intake-progress li.is-current { color:#d9dfeb; }
+.portal-intake-progress-label { overflow:hidden;text-overflow:ellipsis; }
+@media(max-width:700px){.portal-intake-progress-label{display:none}.portal-intake-progress li{justify-content:center}}
 .portal-answer-support { font-size:.9rem; }
 .portal-follow-up { color:#fde68a!important; }
 .portal-document-status { margin-top:1.5rem; padding:1rem; border:1px solid #697890; border-radius:.75rem; }

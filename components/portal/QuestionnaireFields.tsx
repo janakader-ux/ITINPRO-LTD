@@ -8,7 +8,7 @@ const labels:Partial<Record<typeof basicFields[number],string>>={
   w7Reason:'Reason for your ITIN application (Form W-7 box a–h)',
   boxHException:'Form W-7 box h — exception category',
   treatyClaimStatus:'Are you claiming U.S. tax treaty benefits?',
-  taxReturnStatus:'Status of your U.S. federal tax return',
+  taxReturnStatus:'',
   firstName:'Legal first name (as on passport)',
   middleName:'Legal middle name, if any',
   lastName:'Legal last name (as on passport)',
@@ -45,8 +45,10 @@ const labels:Partial<Record<typeof basicFields[number],string>>={
   visaExpiry:'U.S. visa expiry date',
   lastUsEntry:'Date you entered the United States for this ITIN purpose, or “Never entered”',
   previousItinStatus:'Have you ever received an ITIN or IRSN?',
-  previousItinType:'Previous number type',
-  previousItin:'Previous ITIN or IRSN',
+  previousItinType:'Which previous number did you receive?',
+  previousItin:'Previous ITIN number',
+  previousIrsn:'IRS temporary number (IRSN)',
+  irsNoticeType:'IRS notice number, if shown on your letter',
   priorItinFirstName:'Name used for prior ITIN/IRSN — first name',
   priorItinMiddleName:'Name used for prior ITIN/IRSN — middle name, if any',
   priorItinLastName:'Name used for prior ITIN/IRSN — last name',
@@ -75,7 +77,7 @@ const labels:Partial<Record<typeof basicFields[number],string>>={
 const legacyFields = new Set<QuestionnaireField>(['birthName','treatyCountry','spouseName','spouseTaxId','priorItinName','foreignAddress','mailingAddress']);
 const mailingAddressFields = new Set<QuestionnaireField>(['mailingCountry','mailingStreetAddress','mailingCity','mailingRegion','mailingPostalCode','mailingAddressHelp']);
 const birthNameFields = new Set<QuestionnaireField>(['birthFirstName','birthMiddleName','birthLastName']);
-const priorItinFields = new Set<QuestionnaireField>(['previousItinType','previousItin','priorItinFirstName','priorItinMiddleName','priorItinLastName']);
+const priorItinFields = new Set<QuestionnaireField>(['previousItinType','previousItin','previousIrsn','irsNoticeType','priorItinFirstName','priorItinMiddleName','priorItinLastName']);
 const visaDetailFields = new Set<QuestionnaireField>(['visaNumber','visaExpiry']);
 const usPersonFields = new Set<QuestionnaireField>(['usPersonFirstName','usPersonMiddleName','usPersonLastName','usPersonTaxId']);
 const institutionFields = new Set<QuestionnaireField>(['institutionName','institutionCityState','durationOfStay']);
@@ -89,6 +91,9 @@ export function QuestionnaireFields({fields,answers,clientEmail,readOnly,allowIn
   const foreignOnly=answers.foreignAddressStatus==='moved-country-only';
   const showMailing=mailingChoice==='Different mailing address';
   const showPrior=answers.previousItinStatus==='Yes'||answers.applicationType==='renewal';
+  const hasPriorIrsn=showPrior&&['IRSN (temporary IRS number)','Both'].includes(answers.previousItinType||'');
+  const hasPriorItin=showPrior&&['ITIN','Both'].includes(answers.previousItinType||'');
+  const vwpEligible=vwp.has(answers.citizenship||'');
   const vwp=new Set<string>(visaWaiverCountries as readonly string[]);
   const mailingHelpStatus=answerSupportStatus(answers.mailingAddressHelp||'');
   return <div className="portal-fields">{fields.filter(x=>{
@@ -96,7 +101,10 @@ export function QuestionnaireFields({fields,answers,clientEmail,readOnly,allowIn
     if(mailingAddressFields.has(x)&&(!showMailing||x==='mailingAddressHelp'&&readOnly))return false;
     if(birthNameFields.has(x)&&answers.birthNameDifferent!=='Yes')return false;
     if(priorItinFields.has(x)&&!showPrior)return false;
-    if(visaDetailFields.has(x)&&(!answers.visaType||answers.visaType==='No U.S. visa'||answers.visaType.startsWith('Not sure')))return false;
+    if(x==='previousItin'&&!hasPriorItin)return false;
+    if(x==='previousIrsn'&&!hasPriorIrsn)return false;
+    if(x==='irsNoticeType'&&!hasPriorIrsn)return false;
+    if(visaDetailFields.has(x)&&(!answers.visaType||answers.visaType==='No U.S. visa'||answers.visaType==='Visa Waiver Program / ESTA'||answers.visaType.startsWith('Not sure')))return false;
     if(x==='treatyArticle'&&!treatyRequired)return false;
     if(x==='boxHException'&&!showBoxH)return false;
     if(x==='treatyClaimStatus'&&reason!=='f'&&reason!=='h')return false;
@@ -121,14 +129,19 @@ export function QuestionnaireFields({fields,answers,clientEmail,readOnly,allowIn
     if(x==='foreignStreetAddress'||x==='foreignCity')required=!foreignOnly||reason==='b';
     if(x==='boxHException')required=reason==='a'||reason==='h'||reason==='f';
     if(x==='treatyClaimStatus')required=reason==='f'||reason==='h';
-    if(x==='visaNumber'||x==='visaExpiry')required=!!answers.visaType&&answers.visaType!=='No U.S. visa'&&!answers.visaType.startsWith('Not sure');
-    if(x==='lastUsEntry')required=!!answers.visaType&&answers.visaType!=='No U.S. visa'&&!answers.visaType.startsWith('Not sure');
+    if(x==='visaNumber'||x==='visaExpiry')required=!!answers.visaType&&answers.visaType!=='No U.S. visa'&&answers.visaType!=='Visa Waiver Program / ESTA'&&!answers.visaType.startsWith('Not sure');
+    if(x==='lastUsEntry')required=!!answers.visaType&&answers.visaType!=='No U.S. visa'&&answers.visaType!=='Visa Waiver Program / ESTA'&&!answers.visaType.startsWith('Not sure');
     if(x==='treatyArticle')required=treatyRequired;
-    if(priorItinFields.has(x))required=showPrior&&(['previousItin','priorItinFirstName','priorItinLastName'].includes(x));
+    if(priorItinFields.has(x))required=showPrior&&(['priorItinFirstName','priorItinLastName'].includes(x));
+    if(x==='previousItinType')required=showPrior;
+    if(x==='irsNoticeType')required=hasPriorIrsn;
+    if(x==='previousIrsn')required=hasPriorIrsn;
+    if(x==='previousItin')required=hasPriorItin;
+    if(x==='filingStatus')required=!!answers.taxPurpose&&['1040','1040-NR'].includes(answers.taxPurpose);
     if(usPersonFields.has(x))required=x!=='usPersonTaxId';
     if(mailingAddressFields.has(x)&&showMailing)required=['mailingCountry','mailingStreetAddress','mailingCity'].includes(x);
     if(x==='contactEmail'&&emailChoice==='Use another contact email')required=true;
-    if(x==='taxReturnStatus')required=['b','c','d','e','f','g'].includes(reason);
+    if(x==='taxPurpose')required=true;
     if(x==='notes'&&reason==='h')required=true;
     if(x==='companyEin'&&reason==='h'&&['1a','1b'].includes(answers.boxHException||''))required=true;
     if((x==='propertyAddress'||x==='closingDate')&&['h','f'].includes(reason)&&['3','4'].includes(answers.boxHException||''))required=true;
@@ -158,10 +171,8 @@ export function QuestionnaireFields({fields,answers,clientEmail,readOnly,allowIn
       ?foreignAddressExceptionNote
       :x==='foreignCountry'
       ?foreignAddressWarning
-      :x==='citizenship'
-      ?vwpNote
       :x==='visaType'
-      ?'Form W-7 line 6c asks only about U.S. nonimmigrant visas. ESTA is not a visa. Select “No U.S. visa” if you have no U.S. visa.'
+      ?(vwpEligible?vwpNote:'Form W-7 line 6c asks only about U.S. nonimmigrant visas. If you do not hold a U.S. visa, select “No U.S. visa”.')
       :x==='passportExpiry'
       ?'The passport you upload must be unexpired. If it has expired, renew it before continuing or contact the CAA team to review another accepted identity document.'
       :x==='foreignTaxId'
@@ -172,11 +183,17 @@ export function QuestionnaireFields({fields,answers,clientEmail,readOnly,allowIn
       ?'Briefly explain why you need an ITIN and the U.S. income or transaction involved. The CAA team will confirm that the reason and evidence meet IRS rules.'
       :x==='previousItinStatus'&&answers.applicationType==='renewal'
       ?'For a renewal, select Yes and enter the previously assigned ITIN and the name used on it.'
+      :x==='previousIrsn'
+      ?'An IRSN is a temporary IRS number used while an application is being processed. Enter it exactly as shown on your IRS notice, letter or tax return.'
+      :x==='irsNoticeType'
+      ?'Choose the CP number printed on your IRS letter, if there is one. CP565 confirms an ITIN assignment; CP566 asks for more information; CP567 reports a rejection. IRSNs may not have a separate CP notice, so choose “No notice number shown” or “Not sure” when appropriate.'
+      :x==='taxPurpose'
+      ?'Choose Form 1040 for a U.S. resident return or Form 1040-NR for a nonresident return. If you are claiming an exception, choose that option.'
       :'';
     const dateInput=dateFields.has(x)&&(!saved||/^\d{4}-\d{2}-\d{2}$/.test(saved));
     const inputType=x==='contactEmail'?'email':x==='phoneNumber'?'tel':dateInput?'date':'text';
-    return <div key={x} className="portal-answer-field"><label>{labels[x]||x.replace(/([A-Z])/g,' $1').replace(/^./,s=>s.toUpperCase())}{required?(allowIncomplete?' — needed for final W-7':' — required'):''}
-      {options?<select name={x} value={value} disabled={disabled} required={required&&!allowIncomplete} onChange={e=>change(e.target.value)}><option value="">Please select</option>{(optionsForReason||[]).map(option=><option key={option} value={option}>{selectOptionLabels[x]?.[option]||(x==='citizenship'&&vwp.has(option)?option+' — Visa Waiver Program country':option)}</option>)}</select>:
+    return <div key={x} className="portal-answer-field"><label>{labels[x]||x.replace(/([A-Z])/g,' $1').replace(/^./,s=>s.toUpperCase())}{required?<span className="portal-required-mark" aria-label="required"> *</span>:null}
+      {options?<select name={x} value={value} disabled={disabled} required={required&&!allowIncomplete} onChange={e=>change(e.target.value)}><option value="">Please select</option>{(x==='visaType'&&vwpEligible?[...(optionsForReason||[]),'Visa Waiver Program / ESTA']:(optionsForReason||[])).map(option=><option key={option} value={option}>{selectOptionLabels[x]?.[option]||option}</option>)}</select>:
       multilineFields.has(x)?<textarea name={x} rows={3} value={value} onChange={e=>change(e.target.value)} disabled={disabled} required={required&&!allowIncomplete} minLength={x==='foreignStreetAddress'||x==='foreignCity'?2:undefined} maxLength={1500} placeholder={x==='additionalCitizenships'?'List each additional country in full, separated by commas':undefined}/>:
       <input name={x} type={inputType} value={value} onChange={e=>change(e.target.value)} disabled={disabled} required={required&&!allowIncomplete} maxLength={200} placeholder={x==='foreignTaxId'?'Enter the number or N/A':x==='treatyArticle'?'Article number or “Not sure — CAA review”':x==='lastUsEntry'?'MM/DD/YYYY or Never entered':x==='phoneNumber'?'+44… or your country code':undefined}/>}
       {portalContact&&<small>{clientEmail} — this is also your portal sign-in email.</small>}

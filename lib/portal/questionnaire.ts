@@ -15,7 +15,7 @@ export const visaWaiverCountries = [
 export const foreignAddressWarning = 'One complete address outside the United States is required for your ITIN application. If you have moved to the U.S. and no longer have a permanent foreign residence, select the relevant option for CAA review. A nonresident filing a U.S. return must provide a complete recent foreign address.';
 export const foreignAddressExceptionNote = 'If you have moved to the United States and have no permanent foreign residence, IRS instructions may allow the last foreign country only on line 3 for some applicants. This does not apply to reason b: a nonresident filing a U.S. return must provide the complete most recent foreign address. Ask the CAA team if unsure.';
 export const mailingAddressNote = 'This is the address the IRS will use for notices about your ITIN, including an approval notice, and to return any original documents. Please make sure it is correct.';
-export const vwpNote = 'A country marked “Visa Waiver Program” is on the current U.S. VWP list. Travel without a visa still requires an approved ESTA and depends on individual travel-history and other rules. ESTA is not a U.S. visa. If you have no U.S. visa, select “No U.S. visa.” British citizens must meet the U.S. Department of State’s permanent-abode condition.';
+export const vwpNote = 'If you are a national of a Visa Waiver Program country and do not hold a U.S. visa, select “Visa Waiver Program / ESTA”. Travel under the VWP requires approved ESTA and other eligibility checks. ESTA is a travel authorisation, not a U.S. visa. UK nationals must meet the U.S. permanent-abode condition.';
 export const selectOptions: Partial<Record<QuestionnaireField,string[]>> = {
   applicationType:['new','renewal'],
   w7Reason:['a','b','c','d','e','f','g','h'],
@@ -30,7 +30,10 @@ export const selectOptions: Partial<Record<QuestionnaireField,string[]>> = {
   mailingAddressChoice:['Same as foreign address','Different mailing address'],
   contactEmailChoice:['Use my portal email','Use another contact email'],
   previousItinStatus:['Yes','No','Not sure — ask the CAA team'],
-  previousItinType:['ITIN','IRSN','Both','Not sure'],
+  previousItinType:['ITIN','IRSN (temporary IRS number)','Both','Not sure — ask the CAA team'],
+  irsNoticeType:['CP565 — ITIN assigned','CP566 — IRS needs more information','CP567 — application rejected','Other IRS notice','No notice number shown','Not sure / cannot find it'],
+  filingStatus:['Filed already','Not yet filed'],
+  taxPurpose:['1040','1040-NR','Claiming an exception — no return attached','Not sure — CAA review'],
   visaType:['No U.S. visa','B-1','B-2','B-1/B-2','F-1','F-2','J-1','J-2','M-1','M-2','H-1B','H-4','L-1','L-2','O-1','O-3','Other — give details in Notes','Not sure — staff review'],
   relationship:['Child','Parent','Grandchild','Other qualifying relative — explain in Notes','Not sure — staff review'],
   ssnEligibility:['I do not have an SSN and am not eligible','I already have an SSN','I may be eligible for an SSN','My SSN application is pending','Not sure — staff review'],
@@ -75,7 +78,7 @@ export const selectOptionLabels: Partial<Record<QuestionnaireField,Record<string
   }
 };
 export const dateFields = new Set<QuestionnaireField>(['dateOfBirth','passportExpiry','visaExpiry','closingDate']);
-export const multilineFields = new Set<QuestionnaireField>(['mailingAddress','foreignAddress','taxPurpose','notes','additionalCitizenships','propertyAddress']);
+export const multilineFields = new Set<QuestionnaireField>(['mailingAddress','foreignAddress','notes','additionalCitizenships','propertyAddress']);
 export function formatAddress(parts:Record<string,unknown>,prefix:'foreign'|'mailing'){
   const keys=prefix==='foreign'?['foreignStreetAddress','foreignCity','foreignRegion','foreignPostalCode']:['mailingStreetAddress','mailingCity','mailingRegion','mailingPostalCode'];
   return keys.map(k=>String(parts[k]||'').trim()).filter(Boolean).join(', ');
@@ -90,6 +93,10 @@ export function isForeignAddressComplete(answers:Record<string,unknown>={}){
 }
 export function normalizeQuestionnaireAnswers(value: Record<string,unknown>, portalEmail:string) {
   const result={...value};
+  if(result.filingStatus==='filed')result.filingStatus='Filed already';
+  if(result.filingStatus==='not filed'||result.filingStatus==='not yet filed')result.filingStatus='Not yet filed';
+  if(result.previousItinType==='IRSN')result.previousItinType='IRSN (temporary IRS number)';
+  if(result.previousItinType==='IRSN (temporary IRS number)'&&!String(result.previousIrsn||'').trim()&&String(result.previousItin||'').trim()){result.previousIrsn=result.previousItin;result.previousItin='';}
   const splitLegacy=(value:unknown,prefix:'foreign'|'mailing')=>{
     const raw=String(value||'').trim();
     if(!raw)return;
