@@ -6,20 +6,22 @@ import references from '@/lib/blog-reference.json';
 
 type Post = (typeof posts)[number];
 type Reference = (typeof references)[keyof typeof references];
-type Props = { post: Post; reference: Reference; related: Post[] };
+type Props = { post: Post; reference: Reference; related: Post[]; isPublished: boolean };
 export const getStaticPaths: GetStaticPaths = () => ({ paths: posts.map(p => ({ params: { slug: p.slug } })), fallback: false });
 export const getStaticProps: GetStaticProps<Props> = ({ params }) => {
   const post = posts.find(p => p.slug === params?.slug);
   if (!post) return { notFound: true };
-  return { props: { post, reference: references[post.slug as keyof typeof references], related: posts.filter(p => post.related_posts.includes(p.slug)) } };
+  const today = new Date().toISOString().slice(0, 10);
+  const isPublished = post.date_published <= today;
+  return { props: { post, reference: references[post.slug as keyof typeof references], related: posts.filter(p => post.related_posts.includes(p.slug) && p.date_published <= today), isPublished }, revalidate: 3600 };
 };
-export default function BlogPost({post:p, reference:r, related}:Props) {
+export default function BlogPost({post:p, reference:r, related, isPublished}:Props) {
   const url=`https://itinpro.uk/blog/${p.slug}`, image=`https://itinpro.uk/images/blog/${p.slug}-scenario.webp`;
   return <>
     <Head>
       <title>{p.seo_title}</title><meta name="description" content={p.meta_description}/>
       <meta name="keywords" content={[p.primary_keyword,...p.secondary_keywords].join(', ')}/>
-      <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1"/>
+      <meta name="robots" content={isPublished ? "index,follow,max-image-preview:large,max-snippet:-1" : "noindex,follow"}/>
       <link rel="canonical" href={url}/>
       <meta property="og:type" content="article"/><meta property="og:site_name" content="ITIN Pro UK"/><meta property="og:locale" content="en_GB"/>
       <meta property="og:title" content={p.title}/><meta property="og:description" content={p.meta_description}/><meta property="og:url" content={url}/><meta property="og:image" content={image}/><meta property="og:image:alt" content={p.image_scenario.alt}/>
