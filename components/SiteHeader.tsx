@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Menu, X } from 'lucide-react';
 
-const links=[['Home','/'],['Services','/#services'],['ITIN Guides / FAQs','/guides'],['Blog','/blog'],['Client portal','/portal'],['Locations','/#locations']];
+const links=[['Home','/'],['Services','/#services'],['ITIN Guides / FAQs','/guides'],['Blog','/blog'],['Client portal','https://app.mydocsafe.com'],['Locations','/#locations']];
 export function SiteHeader() {
   const [open,setOpen]=useState(false);
   useEffect(()=>{

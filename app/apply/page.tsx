@@ -9,5 +9,5 @@ export const metadata:Metadata={
 };
 
 export default function ApplyPage(){
-  return <><section className="pt-16"><div className="container-premium max-w-4xl"><h1 className="section-title">Start your ITIN application</h1><p className="mt-5 text-lg text-silver">Applying for a U.S. Individual Taxpayer Identification Number (ITIN) from the UK? Start here for a new ITIN or renewal. We’ll guide you through Form W-7, the information and documents needed, and your next steps.</p></div></section><LeadForm startApplication/></>;
+  return <><section className="pt-16"><div className="container-premium max-w-4xl"><h1 className="section-title">Start your ITIN application</h1><p className="mt-5 text-lg text-silver">Applying for a U.S. Individual Taxpayer Identification Number (ITIN) from the UK? Start here for a new ITIN or renewal. Complete your contact details and a few basic questions. Our team will confirm the next steps and send a personal MyDocSafe invitation when your case is ready. No payment or document upload is needed here.</p></div></section><LeadForm startApplication/></>;
 }
