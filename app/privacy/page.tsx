@@ -19,12 +19,12 @@ export default function Privacy(){return <section className="py-20"><div classNa
     <p>Authorised ITIN Pro staff use your information to deal with your enquiry or engagement. Providers supporting our service include:</p>
     <ul>
       <li><strong>Supabase:</strong> our website enquiry database is hosted in Ireland (European Union). We are not using this database to collect client passport uploads.</li>
-      <li><strong>MyDocSafe (planned):</strong> we have selected MyDocSafe as our intended processor for client document storage, secure exchange and electronic signatures. This service is not yet active. Before accepting client documents, we will confirm the account’s UK storage location and data processing agreement and update this notice.</li>
+      <li><strong>MyDocSafe (trial):</strong> we are testing MyDocSafe for client document storage, secure exchange and electronic signatures. Our account is configured for United Kingdom storage. We are confirming the applicable data processing agreement before accepting real client identity and tax documents.</li>
       <li><strong>Render:</strong> our website server is hosted in Oregon, United States. Information submitted through the website is processed by this server before being saved to the enquiry database.</li>
       <li><strong>Cloudflare:</strong> supports website delivery and security.</li>
       <li><strong>Resend:</strong> sends enquiry notifications to our team. These notifications contain enquiry information.</li>
     </ul>
-    <p>Selecting UK document storage will not mean all information is processed only in the UK. Website hosting, email delivery and provider support may involve processing outside the UK. Contact us for information about the arrangements and safeguards applicable to your information.</p>
+    <p>UK document storage does not mean all information is processed only in the UK. Website hosting, email delivery and provider support may involve processing outside the UK. Contact us for information about the arrangements and safeguards applicable to your information.</p>
     <p>Where required for your agreed service, application information is also provided to the IRS in the United States and to advisers or delivery providers involved in your case. We explain the document and submission route as part of your engagement.</p>
     <h2>Security</h2>
     <p>We use HTTPS to protect information in transit and encrypted storage to protect information at rest. Access to client information is restricted to authorised staff and the providers needed to deliver the service. Please wait for our secure document instructions before supplying identity or tax documents.</p>
