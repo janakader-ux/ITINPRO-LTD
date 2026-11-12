@@ -15,7 +15,7 @@ test('all portal routes have stable unique checklist items and canonical categor
   for(const route of applicationRoutes){const items=routeChecklist(route.id);assert.equal(new Set(items.map(x=>x.id)).size,items.length);assert(items.some(x=>x.id==='passport-spread'));assert(routeFee(route.id)>0);}
   assert.equal(routeFee('spouse'),39500);assert.equal(routeFee('renewal'),39500);assert.equal(routeFee('llc-dividend'),42500);assert.equal(routeFee('partnership'),45000);assert.equal(routeFee('firpta'),45000);assert.equal(routeFee('pension'),49500);
   assert.throws(()=>routeChecklist('nonexistent'));
-  assert.match(signatureInstructions,/BLUE INK/);assert.match(signatureInstructions,/our practice/);assert.match(passportInstructions,/facing top page/);
+  assert.match(signatureInstructions,/BLUE INK/);assert.match(signatureInstructions,/our practice/);assert.match(passportInstructions,/the full page immediately above it/);
   assert.match(routeChecklist('partnership').find(x=>x.id==='partnership-agreement')!.instructions,/name and signature/);
 });
 test('untrusted price/role/path fields are excluded and attachment headers, sizes and types are checked',()=>{
