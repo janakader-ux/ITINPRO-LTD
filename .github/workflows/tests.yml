@@ -1,0 +1,44 @@
+name: Tests
+
+# Runs the test suite and the TypeScript check on every pull request and on
+# every push to main. Without this, "the tests pass" is only ever as true as
+# the last time somebody remembered to run them locally.
+#
+# This gate matters before the Phase 2 portal work: that work handles real
+# client passports, and the build scope requires it to be written against a
+# green suite. A red cross here is the signal that something broke.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Cancel an in-progress run if the branch is pushed again, so only the newest
+# commit is tested.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # npm ci installs exactly what package-lock.json pins, so a run cannot
+      # pick up a different dependency version than the one reviewed.
+      - run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Tests
+        run: npm test
