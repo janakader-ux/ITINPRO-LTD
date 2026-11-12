@@ -1,11 +1,11 @@
 import Head from 'next/head';
 import Link from 'next/link';
 import posts from '@/lib/blog-posts.json';
+import { isBlogPublished } from '@/lib/blog-publication';
 import type { GetStaticProps } from 'next';
 type Post = (typeof posts)[number];
 export const getStaticProps: GetStaticProps<{ posts: Post[] }> = async () => {
-  const today = new Date().toISOString().slice(0, 10);
-  return { props: { posts: posts.filter(post => post.date_published <= today) }, revalidate: 3600 };
+  return { props: { posts: posts.filter(post => isBlogPublished(post)) }, revalidate: 3600 };
 };
 export default function Blog({ posts: publishedPosts }: { posts: Post[] }) { return <>
   <Head><title>ITIN Blog: Real Answers from a UK Acceptance Agent | ITIN Pro UK</title><meta name="description" content="Plain-English ITIN answers for UK and international applicants: Form W-7, renewals, FIRPTA, 1040-NR refunds, spouses, dependants and Certifying Acceptance Agent appointments."/><link rel="canonical" href="https://itinpro.uk/blog"/><meta property="og:title" content="ITIN Blog: Real Answers from a UK Acceptance Agent | ITIN Pro UK"/><meta property="og:url" content="https://itinpro.uk/blog"/><meta property="og:type" content="website"/><meta name="twitter:card" content="summary_large_image"/></Head>
