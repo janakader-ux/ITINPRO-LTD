@@ -3,6 +3,7 @@ import Link from 'next/link';
 import type { GetStaticProps, GetStaticPaths } from 'next';
 import posts from '@/lib/blog-posts.json';
 import references from '@/lib/blog-reference.json';
+import { isBlogPublished } from '@/lib/blog-publication';
 
 type Post = (typeof posts)[number];
 type Reference = (typeof references)[keyof typeof references];
@@ -10,10 +11,8 @@ type Props = { post: Post; reference: Reference; related: Post[]; isPublished: b
 export const getStaticPaths: GetStaticPaths = () => ({ paths: posts.map(p => ({ params: { slug: p.slug } })), fallback: false });
 export const getStaticProps: GetStaticProps<Props> = ({ params }) => {
   const post = posts.find(p => p.slug === params?.slug);
-  if (!post) return { notFound: true };
-  const today = new Date().toISOString().slice(0, 10);
-  const isPublished = post.date_published <= today;
-  return { props: { post, reference: references[post.slug as keyof typeof references], related: posts.filter(p => post.related_posts.includes(p.slug) && p.date_published <= today), isPublished }, revalidate: 3600 };
+  if (!post || !isBlogPublished(post)) return { notFound: true, revalidate: 3600 };
+  return { props: { post, reference: references[post.slug as keyof typeof references], related: posts.filter(p => post.related_posts.includes(p.slug) && isBlogPublished(p)), isPublished: true }, revalidate: 3600 };
 };
 export default function BlogPost({post:p, reference:r, related, isPublished}:Props) {
   const url=`https://itinpro.uk/blog/${p.slug}`, image=`https://itinpro.uk/images/blog/${p.slug}-scenario.webp`;
