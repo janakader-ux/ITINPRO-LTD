@@ -7,7 +7,7 @@ import { randomUUID,createHash } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { paymentDatabase,stripeClient,verifySandboxCatalog,paymentConfigurationReady } from '@/lib/payments';
-import { portalEnabled,portalSession,portalBucket,uploadsEnabled,ensurePortalBucket,sendPortalLink,safePortalError } from '@/lib/portal/server';
+import { portalEnabled,portalSession,portalBucketName,uploadsEnabled,ensurePortalBucket,sendPortalLink,safePortalError } from '@/lib/portal/server';
 import { getApplicationRoute,routeChecklist,routeFee,checklistVersion } from '@/lib/portal/checklists';
 import { sameOrigin,caseInput,answersInput,draftAnswersInput,foreignAddressInput,validateFile } from '@/lib/portal/validation';
 import { engagementSnapshot } from '@/lib/portal/engagement';
@@ -109,7 +109,7 @@ export async function POST(request:Request) {
       const bytes=new Uint8Array(await file.arrayBuffer());const ext=validateFile(bytes,file.name,file.type);
       const id=randomUUID(),path=`${c.id}/${kind}/${id}.${ext}`,hash=createHash('sha256').update(bytes).digest('hex');
       await ensurePortalBucket();
-      const uploaded=await s.admin.storage.from(portalBucket).upload(path,bytes,{contentType:file.type,upsert:false});
+      const uploaded=await s.admin.storage.from(portalBucketName()).upload(path,bytes,{contentType:file.type,upsert:false});
       if(uploaded.error)throw uploaded.error;
       const recorded=await s.admin.from('portal_documents').insert({id,case_id:c.id,uploaded_by:s.user.id,item_id:item,name:file.name.replace(/[\r\n]/g,'').slice(0,200),path,mime:file.type,byte_size:bytes.length,sha256:hash,kind,visibility:kind==='upload'?'client':'staff'});
       if(recorded.error){console.error('itinpro_portal_record_failure',JSON.stringify({documentId:id}));throw recorded.error;}
