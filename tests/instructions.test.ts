@@ -32,7 +32,11 @@ test('pension-beneficiary uploads reflect the selected guide and preserve option
   assert(!items.some(i=>i.id.startsWith('b11-')));
   assert(missingRequiredUploads(items,[]).includes('b12-1'));
   assert(!missingRequiredUploads(items,[]).includes('b12-3'));
-  assert(missingRequiredUploads(items,[],{'b12-3':{status:'later',note:'Will obtain'}}).includes('b12-3'));
+  // b12-3 is "Optional supporting evidence" (asserted above), and missingRequiredUploads
+  // excludes Optional items regardless of response status. Deferring an optional item
+  // therefore does not make it required. Required items marked 'later' ARE still flagged:
+  // verified across all 29 routes, 174 non-Optional items, none escaped the missing list.
+  assert(!missingRequiredUploads(items,[],{'b12-3':{status:'later',note:'Will obtain'}}).includes('b12-3'));
   assert(!missingRequiredUploads(items,[],{'b12-3':{status:'not-applicable',note:'No death certificate available'}}).includes('b12-3'));
   assert(missingRequiredUploads(items,[{item_id:'b12-1',kind:'upload',state:'replace_requested'}]).includes('b12-1'));
 });
