@@ -5,7 +5,33 @@ import { cookies } from 'next/headers';
 import { paymentDatabase } from '../payments';
 import { createHmac } from 'node:crypto';
 import { Resend } from 'resend';
-export const portalBucket = 'itinpro-case-files-sandbox';
+export type PortalMode = 'sandbox' | 'live';
+// Each mode owns a separate private bucket so synthetic test files and real
+// client documents can never share an object store.
+const portalBuckets: Record<PortalMode,string> = {
+  sandbox: 'itinpro-case-files-sandbox',
+  live: 'itinpro-case-files',
+};
+// Retained so existing imports keep resolving. Prefer portalBucketName().
+export const portalBucket = portalBuckets.sandbox;
+// Returns null for anything unrecognised, including unset, so callers fail closed.
+export function portalMode(): PortalMode | null {
+  const mode = process.env.PORTAL_MODE?.trim();
+  return mode === 'sandbox' || mode === 'live' ? mode : null;
+}
+export function portalLive() { return portalMode() === 'live'; }
+// Throws rather than guessing a bucket: a wrong guess here would put a real
+// client passport in the sandbox store, or a test file in the live one.
+export function portalBucketName(): string {
+  const mode = portalMode();
+  if (!mode) throw new Error('PORTAL_MODE_NOT_CONFIGURED');
+  return portalBuckets[mode];
+}
+// Deliberately still sandbox-only. Admitting 'live' here would let clients sign
+// in to a portal that still refuses to create a real case: the synthetic-data
+// gates in case-options.ts, create-reviewed-case.ts, invoice.ts, checkout.ts and
+// app/api/portal/cases/route.ts all reject real orders. This line must change in
+// the same reviewed commit as those gates, not before.
 export function portalEnabled() { return process.env.PORTAL_MODE === 'sandbox'; }
 export function uploadsEnabled() { return portalEnabled() && process.env.PORTAL_UPLOADS_ENABLED === 'true'; }
 export async function portalClient() {
@@ -108,12 +134,13 @@ enquiries@itinpro.uk`;
 }
 export async function ensurePortalBucket() {
   const admin=paymentDatabase();
-  const {data,error}=await admin.storage.getBucket(portalBucket);
+  const bucket=portalBucketName();
+  const {data,error}=await admin.storage.getBucket(bucket);
   if (data) { if(data.public) throw new Error('PRIVATE_BUCKET_REQUIRED'); return; }
   if (error && String(error.statusCode)!=='404' && !/not found/i.test(error.message)) throw error;
-  const created=await admin.storage.createBucket(portalBucket,{public:false,fileSizeLimit:10*1024*1024,allowedMimeTypes:['application/pdf','image/jpeg','image/png']});
+  const created=await admin.storage.createBucket(bucket,{public:false,fileSizeLimit:10*1024*1024,allowedMimeTypes:['application/pdf','image/jpeg','image/png']});
   if(created.error && !/already exists/i.test(created.error.message)) throw created.error;
-  const checked=await admin.storage.getBucket(portalBucket);
+  const checked=await admin.storage.getBucket(bucket);
   if(checked.error || !checked.data || checked.data.public) throw new Error('PRIVATE_BUCKET_REQUIRED');
 }
 
