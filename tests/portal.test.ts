@@ -15,7 +15,7 @@ test('all portal routes have stable unique checklist items and canonical categor
   for(const route of applicationRoutes){const items=routeChecklist(route.id);assert.equal(new Set(items.map(x=>x.id)).size,items.length);assert(items.some(x=>x.id==='passport-spread'));assert(routeFee(route.id)>0);}
   assert.equal(routeFee('spouse'),39500);assert.equal(routeFee('renewal'),39500);assert.equal(routeFee('llc-dividend'),42500);assert.equal(routeFee('partnership'),45000);assert.equal(routeFee('firpta'),45000);assert.equal(routeFee('pension'),49500);
   assert.throws(()=>routeChecklist('nonexistent'));
-  assert.match(signatureInstructions,/BLUE INK/);assert.match(signatureInstructions,/our practice/);assert.match(passportInstructions,/facing top page/);
+  assert.match(signatureInstructions,/BLUE INK/);assert.match(signatureInstructions,/our practice/);assert.match(passportInstructions,/the full page immediately above it/);
   assert.match(routeChecklist('partnership').find(x=>x.id==='partnership-agreement')!.instructions,/name and signature/);
 });
 test('untrusted price/role/path fields are excluded and attachment headers, sizes and types are checked',()=>{
@@ -67,29 +67,57 @@ test('ITIN case choices exclude EIN and price/category mismatches; test recipien
 });
 
 test('foreign address is mandatory and US countries or blank details cannot progress; address/email choices copy safely',()=>{
-  const valid={foreignAddress:'1 TEST Road, Test City, TEST POSTCODE',foreignCountry:'United Kingdom'};
+  // 4951173 ("Build Form W-7 client intake") split the single foreignAddress box into
+  // foreignStreetAddress / foreignCity / foreignRegion / foreignPostalCode, and made
+  // answersInput require the full W-7 identity set. A complete fixture is therefore
+  // needed to assert the positive case; the address rules below are what this test guards.
+  // foreignAddress is the composed string that normalizeQuestionnaireAnswers builds from
+  // the structured parts, and it is what foreignAddressInput actually checks (length >= 10).
+  // Saved answers always carry it, so the fixture does too.
+  const address={foreignCountry:'United Kingdom',foreignStreetAddress:'1 TEST Road',foreignCity:'Test City',foreignRegion:'Testshire',foreignPostalCode:'TE5 7XX',foreignAddress:'1 TEST Road, Test City, Testshire, TE5 7XX'};
+  const valid={...address,applicationType:'new',w7Reason:'b',birthNameDifferent:'No',firstName:'TEST',lastName:'CLIENT',dateOfBirth:'01/01/1980',sex:'Male',birthCountry:'United Kingdom',citizenship:'United Kingdom',mailingAddressChoice:'Same as foreign address',phoneNumber:'+44 1234 567890',passportIssuer:'United Kingdom',passportNumber:'TEST123456',passportExpiry:'2030-01-01',previousItinStatus:'No',visaType:'No U.S. visa',taxPurpose:'1040-NR',filingStatus:'Not yet filed'};
   assert(foreignAddressInput.safeParse(valid).success);
   assert(answersInput.safeParse(valid).success);
-  for(const invalid of [{},{...valid,foreignAddress:'   '},{...valid,foreignCountry:''},{...valid,foreignCountry:'United States'},{...valid,foreignCountry:'USA'}]){
+  // The load-bearing rule: a blank address, a missing country, or any spelling of the
+  // United States must fail both the address check and the full answers check.
+  for(const invalid of [{},{...valid,foreignStreetAddress:'   ',foreignCity:'   ',foreignAddress:'   '},{...valid,foreignCountry:''},{...valid,foreignCountry:'United States'},{...valid,foreignCountry:'USA'}]){
     assert(!foreignAddressInput.safeParse(invalid).success);
     assert(!answersInput.safeParse(invalid).success);
   }
-  const copied=normalizeQuestionnaireAnswers({...valid,mailingAddressChoice:'Same as foreign address',mailingAddress:'',mailingCountry:'',contactEmailChoice:'Use my portal email',contactEmail:'injected@example.test'},'tester@example.test');
-  assert.equal(copied.mailingAddress,valid.foreignAddress);assert.equal(copied.mailingCountry,valid.foreignCountry);assert.equal(copied.contactEmail,'tester@example.test');
+  // Same-as-foreign composes the mailing address from the structured parts, and a
+  // client-supplied contact email never overrides the portal sign-in email.
+  const copied=normalizeQuestionnaireAnswers({...valid,contactEmailChoice:'Use my portal email',contactEmail:'injected@example.test'},'tester@example.test');
+  assert.equal(copied.mailingAddress,'1 TEST Road, Test City, Testshire, TE5 7XX');
+  assert.equal(copied.mailingCountry,'United Kingdom');
+  assert.equal(copied.contactEmail,'tester@example.test');
   assert(!answersInput.safeParse({...valid,role:'staff'}).success);
   assert(!answersInput.safeParse({...valid,contactEmailChoice:'Use another contact email',contactEmail:''}).success);
-  const different=normalizeQuestionnaireAnswers({...valid,mailingAddressChoice:'Different mailing address',mailingAddress:'2 OTHER TEST Road',contactEmailChoice:'Use another contact email',contactEmail:'alternative@example.test'},'tester@example.test');
-  assert.equal(different.mailingAddress,'2 OTHER TEST Road');assert.equal(different.contactEmail,'alternative@example.test');assert(answersInput.safeParse(different).success);
-  assert(selectOptions.filingStatus?.includes('Married filing jointly'));assert(selectOptions.visaType?.includes('F-1'));assert(countryOptions.includes('United States'));
+  const different=normalizeQuestionnaireAnswers({...valid,mailingAddressChoice:'Different mailing address',mailingCountry:'United States',mailingStreetAddress:'2 OTHER TEST Road',mailingCity:'Otherville',contactEmailChoice:'Use another contact email',contactEmail:'alternative@example.test'},'tester@example.test');
+  assert.equal(different.mailingAddress,'2 OTHER TEST Road, Otherville');
+  assert.equal(different.contactEmail,'alternative@example.test');
+  assert(answersInput.safeParse(different).success);
+  // filingStatus now means "have you filed", not the IRS filing status, so the old
+  // 'Married filing jointly' option is gone; validation accepts only these two.
+  assert.deepEqual(selectOptions.filingStatus,['Filed already','Not yet filed']);
+  assert(selectOptions.visaType?.includes('F-1'));assert(countryOptions.includes('United States'));
 });
 
 test('questionnaire renders mandatory foreign inputs, dropdowns and live copied addresses without losing saved dates',()=>{
-  const html=renderToStaticMarkup(createElement(QuestionnaireFields,{fields:[...basicFields],answers:{foreignAddress:'1 TEST Road, Test City',foreignCountry:'United Kingdom',mailingAddressChoice:'Same as foreign address',mailingAddress:'OLD ADDRESS',contactEmailChoice:'Use my portal email',contactEmail:'old@example.test',dateOfBirth:'01/01/1980'},clientEmail:'tester@example.test',readOnly:false,onChange:()=>{}}));
+  const html=renderToStaticMarkup(createElement(QuestionnaireFields,{fields:[...basicFields],answers:{foreignCountry:'United Kingdom',foreignStreetAddress:'1 TEST Road',foreignCity:'Test City',mailingAddressChoice:'Same as foreign address',mailingAddress:'OLD ADDRESS',contactEmailChoice:'Use my portal email',contactEmail:'old@example.test',dateOfBirth:'01/01/1980'},clientEmail:'tester@example.test',readOnly:false,onChange:()=>{}}));
+  // Structured foreign address since 4951173: country, street and city are the mandatory
+  // parts, region and postcode are optional, and the old single box is gone.
   assert.match(html,/<select[^>]*name="foreignCountry"[^>]*required/);
-  assert.match(html,/<textarea[^>]*name="foreignAddress"[^>]*required/);
+  assert.match(html,/<input(?=[^>]*name="foreignStreetAddress")(?=[^>]*required)[^>]*>/);
+  assert.match(html,/<input(?=[^>]*name="foreignCity")(?=[^>]*required)[^>]*>/);
+  assert.doesNotMatch(html,/name="foreignAddress"/);
+  assert.match(html,/<input(?=[^>]*name="foreignRegion")(?![^>]*required)[^>]*>/);
+  assert.match(html,/<input(?=[^>]*name="foreignPostalCode")(?![^>]*required)[^>]*>/);
   assert.match(html,/<select[^>]*name="filingStatus"/);
-  assert.match(html,/<select[^>]*name="visaType"/);
-  assert.match(html,/<textarea[^>]*name="mailingAddress"[^>]*disabled[^>]*>1 TEST Road, Test City/);
+  assert.match(html,/<select(?=[^>]*name="visaType")(?=[^>]*required)[^>]*>/);
+  // Same-as-foreign hides the mailing fields entirely rather than showing a disabled
+  // copy, so a stale saved mailing address can never be displayed or resubmitted.
+  assert.doesNotMatch(html,/name="mailingStreetAddress"/);
+  assert.match(html,/The foreign address will also be used as your IRS mailing address/);
   assert.match(html,/<input[^>]*name="contactEmail"[^>]*value="tester@example.test"/);
   assert.match(html,/<input(?=[^>]*name="dateOfBirth")(?=[^>]*type="text")(?=[^>]*value="01\/01\/1980")[^>]*>/);
   assert(!html.includes('OLD ADDRESS'));
